@@ -17,7 +17,7 @@ class Extent {
         Extent(int e_s, int s_t)
         :obsolete_space(0),free_space(e_s), ext_size(e_s),
         objects(new unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > () ),
-        locality(0), generation(NULL), timestamp(NULL), type(NULL),
+        locality(0), generation(0), timestamp(0), type(0),
         secondary_threshold(s_t)
         {}
 
@@ -44,7 +44,7 @@ class Extent {
         int add_object(Extent_Object* obj, int size, int generation = 0)
         {
             int temp_size = size < free_space?size:free_space;
-            if(timestamp = NULL)
+            if(!timestamp)
             {
                 timestamp = obj->creation_time;
             }else if(obj->creation_time < timestamp)
@@ -52,7 +52,7 @@ class Extent {
                 timestamp = obj->creation_time;
             }
 
-            if(generation = NULL)
+            if(!generation)
             {
                 this->generation = obj->generation;
             }else if(generation > this->generation)
@@ -61,7 +61,7 @@ class Extent {
             }
             Extent_Object_Shard* new_shard = new Extent_Object_Shard(size);
             obj->shards->push_back(new_shard);
-            objects->try_emplace(obj, new list<Extent_Object_Shard*>());
+            objects->emplace(std::make_pair(obj, new list<Extent_Object_Shard*>()));
             objects->find(obj)->second->push_back(new_shard);
             free_space -= temp_size;
             return temp_size;

@@ -60,11 +60,11 @@ class Stripe{
                 extents->push_back(ext);
                 free_space-=1;
                 int locality = 0;
-                while(*localities[locality] == num_data_blocks)
+                while((*localities)[locality] == num_data_blocks)
                 {
                     locality += 1
                 }
-                localities[locality] += 1
+                (*localities)[locality] += 1;
                 ext->locality = locality;
                 if(ext->timestamp > timestamp)
                 {
@@ -79,7 +79,7 @@ class Stripe{
         void del_extent(Extent * ext)
         {
             ext->remove_objects();
-            localities[ext->locality] -= 1;
+            (*localities)[ext->locality] -= 1;
             obsolete -= ext->obsolete_space;
             extents->remove(ext);
             free_space += 1;
