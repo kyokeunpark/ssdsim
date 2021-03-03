@@ -45,7 +45,7 @@ class Stripe{
         }
 
         double get_obsolete_percentage(){
-            return obsolete/stripe_size*100
+            return obsolete/stripe_size*100;
         }
 
         int get_num_data_exts()
@@ -62,7 +62,7 @@ class Stripe{
                 int locality = 0;
                 while((*localities)[locality] == num_data_blocks)
                 {
-                    locality += 1
+                    locality += 1;
                 }
                 (*localities)[locality] += 1;
                 ext->locality = locality;
