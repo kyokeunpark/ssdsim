@@ -21,6 +21,11 @@ class Extent {
         secondary_threshold(s_t)
         {}
 
+        ~Extent()
+        {
+          delete objects;
+        }
+
         double get_age()
         {
             return difftime(time(nullptr), timestamp);
@@ -87,6 +92,7 @@ class Extent {
             }
             return obsolete_space / ext_size;
         }
+
         unordered_map<Extent_Object*, double > delete_ext()
         {
             unordered_map<Extent_Object*, double > ret = unordered_map<Extent_Object*, double >();
@@ -104,9 +110,5 @@ class Extent {
             generation = 0;
             free_space = ext_size;
             return ret;
-        }
-        ~Extent()
-        {
-          delete objects;
         }
 };
