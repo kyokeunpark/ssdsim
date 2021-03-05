@@ -243,7 +243,7 @@ private:
 		samples sizes = samples();
 		samples lst = { (int)(0.9 * this->ext_size),
 					(int)(this->ext_size - 0.9 * this->ext_size) };
-		for (int i = 1; i < 14; i++)
+		for (int i = 0; i < 14; i++)
 			sizes.insert(sizes.end(), lst.begin(), lst.end());
 		return sizes;
 	}
@@ -266,7 +266,7 @@ private:
 			lst = { (int)(this->sim_time + 1), (int)(this->sim_time + 1) };
 		this->turn++;
 
-		for (int i = 1; i < 14; i++)
+		for (int i = 0; i < 14; i++)
 			lives.insert(lives.end(), lst.begin(), lst.end());
 
 		return lives;
