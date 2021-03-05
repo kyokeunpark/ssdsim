@@ -3,6 +3,8 @@
 
 #include "samplers.h"
 
+using extent_lst = std::vector<int>;
+
 int main(int argc, char *argv[]) {
 	int ext_size;
 	short threshold;
@@ -18,10 +20,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	const unsigned short ave_obj_size = 35000;
-	const unsigned long int data_center_size = 3500000 * (unsigned long) ave_obj_size;
+	const unsigned long data_center_size = 3500000 * (unsigned long) ave_obj_size;
 	const float striping_cycle = 1.0 / 12.0;
 	const float deletion_cycle = striping_cycle;
-	const short simul_time = 365;
+	const float simul_time = 365.0;
 	const int num_objs = 1000000;
 
 	// Flag to record information about ext size distributions - small object extents, large obj exts, etc
@@ -31,11 +33,12 @@ int main(int argc, char *argv[]) {
 
 	const short num_stripes_per_cycle = 100;
 	const short num_iterations = 1;
+	SimpleSampler sampler = DeterministicDistributionSampler(simul_time);
 	const short secondary_threshold = threshold;
 
-	SimpleSampler sampler = DeterministicDistributionSampler(simul_time);
+	extent_lst ext_sizes = { ext_size };
 
-	std::cout << data_center_size << std::endl;
+	std::cout << threshold << ", " << secondary_threshold << std::endl;
 
     return 0;
 }
