@@ -152,6 +152,8 @@ public:
 /*
  * A sampler where the life distribution of the Giza CDF has been approximated
  * by a Weibull function.
+ *
+ * TODO: Need to figure out implementing this properly with C++
  */
 class WeibullSampler: public DeterministicDistributionSampler
 {
