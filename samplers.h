@@ -11,21 +11,24 @@
 using samples = std::vector<int>;
 using tuple = std::pair<samples, samples>;
 
-static inline int randint(int min, int max) {
+static inline int randint(int min, int max)
+{
 	return (rand() % ((max + 1) + min)) + min;
 }
 
 /*
  * Blueprint for implementing samplers for object size and life
  */
-class Sampler {
+class Sampler
+{
 
 protected:
 	double sim_time;
 	unsigned seed;
 
 public:
-	Sampler(double sim_time) {
+	Sampler(double sim_time)
+	{
 		this->sim_time = sim_time;
 		this->seed = std::chrono::system_clock::now().time_since_epoch().count();
 	}
@@ -38,12 +41,14 @@ public:
 
 };
 
-class SimpleSampler: public Sampler {
+class SimpleSampler: public Sampler
+{
 
 public:
 	SimpleSampler(double sim_time): Sampler(sim_time) {}
 
-	tuple get_size_age_sample(const int num_samples = 1) {
+	tuple get_size_age_sample(const int num_samples = 1)
+	{
 		return tuple(this->sample_size(num_samples), this->sample_life(num_samples));
 	}
 
@@ -53,7 +58,8 @@ private:
 	 * Returns a list of integer as the size of an object, sampled from the
 	 * distribution, the result is rounded to integer
 	 */
-	samples sample_size(const int num_samples) {
+	samples sample_size(const int num_samples)
+	{
 		samples sizes = samples();
 		std::mt19937 generator(this->seed);
 		std::uniform_real_distribution<double> real_dist(0.0, 100.0);
@@ -100,7 +106,8 @@ private:
 	 * Returns a list of integer as the life of an object, sampled from the
 	 * distribution, the result is rounded to integer
 	 */
-	samples sample_life(const int num_samples) {
+	samples sample_life(const int num_samples)
+	{
 		samples lives = samples();
 		std::mt19937 generator(this->seed);
 		std::uniform_real_distribution<double> real_dist(0.0, 100.0);
@@ -130,14 +137,131 @@ private:
 /*
  * Returns deterministic life and size samples
  */
-class DeterministicDistributionSampler: public SimpleSampler {
+class DeterministicDistributionSampler: public SimpleSampler
+{
 
 public:
-	DeterministicDistributionSampler(double sim_time): SimpleSampler(sim_time) {
+	DeterministicDistributionSampler(double sim_time): SimpleSampler(sim_time)
+	{
 		this->seed = 0;
 		srand(0);
 	}
 
 };
+
+/*
+ * A sampler where the life distribution of the Giza CDF has been approximated
+ * by a Weibull function.
+ */
+class WeibullSampler: public DeterministicDistributionSampler
+{
+
+public:
+	samples sample_life(const int num_samples)
+	{
+		samples lives = samples();
+		float a = 0.3;
+		int scale = 28000;
+		return lives;
+	}
+
+};
+
+class SanityCheckSampler1: public Sampler
+{
+	int obj_size, turn;
+
+public:
+	SanityCheckSampler1(const double sim_time, const int obj_size):
+		Sampler(sim_time)
+	{
+		this->obj_size = obj_size;
+		this->turn = 0;
+	}
+
+	tuple get_size_age_sample(const int num_samples)
+	{
+		return tuple(this->sample_size(), this->sample_life());
+	}
+
+	samples sample_size()
+	{
+		if (this->turn < 1 or !(this->turn % 2))
+			return { this->obj_size, this->obj_size };
+		else
+			return { this->obj_size };
+	}
+
+	/*
+	 * Half othe created objects live for a day and the rest never get deleted.
+	 */
+	samples sample_life()
+	{
+		if (this->turn < 1 || !(this->turn % 2)) {
+			this->turn++;
+
+			/*
+			 * TODO
+			 * Original Python code returns [ self.sim_time + 1, 0.00001 ].
+			 * Looking at the other implementation of this function,
+			 * they return list of INTEGERS.
+			 */
+			return { (int)std::ceil(this->sim_time + 1), 1 };
+		} else {
+			this->turn++;
+			return { (int)std::ceil(this->sim_time + 1) };
+		}
+	}
+};
+
+/*
+ * 1 Stripe create in total, 0.1 of stripe is deleted each cycle
+ */
+class StripeLevelSanityCheckSampler2: public Sampler
+{
+	int ext_size, turn;
+
+public:
+	StripeLevelSanityCheckSampler2(const double sim_time, const int ext_size):
+		Sampler(sim_time)
+	{
+		this->ext_size = ext_size;
+		this->turn = 0;
+	}
+
+	samples sample_size()
+	{
+		samples sizes = samples();
+		samples lst = { (int)(0.9 * this->ext_size),
+					(int)(this->ext_size - 0.9 * this->ext_size) };
+		for (int i = 1; i < 14; i++)
+			sizes.insert(sizes.end(), lst.begin(), lst.end());
+		return sizes;
+	}
+
+	/*
+	 * Half of the created objects live for a day and the rest never get deleted
+	 */
+	samples sample_life()
+	{
+		samples lives = samples();
+		samples lst;
+
+		if (this->turn < 1 or (this->turn - 1) % 10)
+			lst = { (int)(this->sim_time + 1), 1 };
+		else
+			/*
+			 * TODO
+			 * Similar story here with SanityCheckSampler1
+			 */
+			lst = { (int)(this->sim_time + 1), (int)(this->sim_time + 1) };
+		this->turn++;
+
+		for (int i = 1; i < 14; i++)
+			lives.insert(lives.end(), lst.begin(), lst.end());
+
+		return lives;
+	}
+}
 
 #endif // __SAMPLERS_H_
