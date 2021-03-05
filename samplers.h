@@ -8,8 +8,11 @@
 #include <vector>
 #include <utility>
 
-using samples = std::vector<int>;
-using tuple = std::pair<samples, samples>;
+// Some sizes/lives return integer and some returns float.
+// Hence, let it be type of float to remove any problems
+using sizes = std::vector<double>;
+using lives = std::vector<double>;
+using tuple = std::pair<sizes, lives>;
 
 static inline int randint(int min, int max)
 {
@@ -58,9 +61,9 @@ private:
 	 * Returns a list of integer as the size of an object, sampled from the
 	 * distribution, the result is rounded to integer
 	 */
-	samples sample_size(const int num_samples)
+	sizes sample_size(const int num_samples)
 	{
-		samples sizes = samples();
+		sizes sizes_lst = sizes();
 		std::mt19937 generator(this->seed);
 		std::uniform_real_distribution<double> real_dist(0.0, 100.0);
 
@@ -68,47 +71,47 @@ private:
 			double temp = real_dist(generator);
 
 			if (temp < 50)
-				sizes.emplace_back(randint(4, 10));
+				sizes_lst.emplace_back(randint(4, 10));
 			else if (temp < 65)
-				sizes.emplace_back(randint(11, 50));
+				sizes_lst.emplace_back(randint(11, 50));
 			else if (temp < 75.1)
-				sizes.emplace_back(randint(51, 100));
+				sizes_lst.emplace_back(randint(51, 100));
 			else if (temp < 81.3)
-				sizes.emplace_back(randint(101, 200));
+				sizes_lst.emplace_back(randint(101, 200));
 			else if (temp < 85.5)
-				sizes.emplace_back(randint(201, 300));
+				sizes_lst.emplace_back(randint(201, 300));
 			else if (temp < 88)
-				sizes.emplace_back(randint(301, 400));
+				sizes_lst.emplace_back(randint(301, 400));
 			else if (temp < 89.5)
-				sizes.emplace_back(randint(401, 500));
+				sizes_lst.emplace_back(randint(401, 500));
 			else if (temp < 90.7)
-				sizes.emplace_back(randint(501, 600));
+				sizes_lst.emplace_back(randint(501, 600));
 			else if (temp < 91.8)
-				sizes.emplace_back(randint(601, 700));
+				sizes_lst.emplace_back(randint(601, 700));
 			else if (temp < 92.7)
-				sizes.emplace_back(randint(701, 800));
+				sizes_lst.emplace_back(randint(701, 800));
 			else if (temp < 93.6)
-				sizes.emplace_back(randint(801, 900));
+				sizes_lst.emplace_back(randint(801, 900));
 			else if (temp < 94)
-				sizes.emplace_back(randint(901, 1000));
+				sizes_lst.emplace_back(randint(901, 1000));
 			else if (temp < 95.2)
-				sizes.emplace_back(randint(1001, 1500));
+				sizes_lst.emplace_back(randint(1001, 1500));
 			else if (temp < 96.2)
-				sizes.emplace_back(randint(1501, 2000));
+				sizes_lst.emplace_back(randint(1501, 2000));
 			else
-				sizes.emplace_back(randint(2001, 3000));
+				sizes_lst.emplace_back(randint(2001, 3000));
 		}
 
-		return sizes;
+		return sizes_lst;
 	}
 
 	/*
 	 * Returns a list of integer as the life of an object, sampled from the
 	 * distribution, the result is rounded to integer
 	 */
-	samples sample_life(const int num_samples)
+	lives sample_life(const int num_samples)
 	{
-		samples lives = samples();
+		lives lives_lst = lives();
 		std::mt19937 generator(this->seed);
 		std::uniform_real_distribution<double> real_dist(0.0, 100.0);
 
@@ -116,20 +119,20 @@ private:
 			double temp = real_dist(generator);
 
 			if (temp < 5)
-				lives.emplace_back(1);
+				lives_lst.emplace_back(1);
 			else if (temp < 9)
-				lives.emplace_back(randint(2, 7));
+				lives_lst.emplace_back(randint(2, 7));
 			else if (temp < 12)
-				lives.emplace_back(randint(8, 30));
+				lives_lst.emplace_back(randint(8, 30));
 			else if (temp < 16)
-				lives.emplace_back(randint(31, 90));
+				lives_lst.emplace_back(randint(31, 90));
 			else if (temp < 26)
-				lives.emplace_back(randint(91, 365));
+				lives_lst.emplace_back(randint(91, 365));
 			else
-				lives.emplace_back(std::ceil(this->sim_time + 1));
+				lives_lst.emplace_back(std::ceil(this->sim_time + 1));
 		}
 
-		return lives;
+		return lives_lst;
 	}
 
 };
@@ -159,22 +162,23 @@ class WeibullSampler: public DeterministicDistributionSampler
 {
 
 public:
-	samples sample_life(const int num_samples)
+	lives sample_life(const int num_samples)
 	{
-		samples lives = samples();
+		lives lives_lst = lives();
 		float a = 0.3;
 		int scale = 28000;
-		return lives;
+		return lives_lst;
 	}
 
 };
 
 class SanityCheckSampler1: public Sampler
 {
-	int obj_size, turn;
+	float obj_size;
+	int turn;
 
 public:
-	SanityCheckSampler1(const double sim_time, const int obj_size):
+	SanityCheckSampler1(const double sim_time, const float obj_size):
 		Sampler(sim_time)
 	{
 		this->obj_size = obj_size;
@@ -187,7 +191,7 @@ public:
 	}
 
 private:
-	samples sample_size()
+	sizes sample_size()
 	{
 		if (this->turn < 1 or !(this->turn % 2))
 			return { this->obj_size, this->obj_size };
@@ -198,7 +202,7 @@ private:
 	/*
 	 * Half othe created objects live for a day and the rest never get deleted.
 	 */
-	samples sample_life()
+	lives sample_life()
 	{
 		if (this->turn < 1 || !(this->turn % 2)) {
 			this->turn++;
@@ -209,10 +213,10 @@ private:
 			 * Looking at the other implementation of this function,
 			 * they return list of INTEGERS.
 			 */
-			return { (int)std::ceil(this->sim_time + 1), 1 };
+			return { this->sim_time + 1, 0.000001 };
 		} else {
 			this->turn++;
-			return { (int)std::ceil(this->sim_time + 1) };
+			return { this->sim_time + 1 };
 		}
 	}
 };
@@ -238,38 +242,38 @@ public:
 	}
 
 private:
-	samples sample_size()
+	sizes sample_size()
 	{
-		samples sizes = samples();
-		samples lst = { (int)(0.9 * this->ext_size),
-					(int)(this->ext_size - 0.9 * this->ext_size) };
+		sizes sizes_lst = sizes();
+		sizes lst = { (0.9 * this->ext_size),
+					(this->ext_size - 0.9 * this->ext_size) };
 		for (int i = 0; i < 14; i++)
-			sizes.insert(sizes.end(), lst.begin(), lst.end());
-		return sizes;
+			sizes_lst.insert(sizes_lst.end(), lst.begin(), lst.end());
+		return sizes_lst;
 	}
 
 	/*
 	 * Half of the created objects live for a day and the rest never get deleted
 	 */
-	samples sample_life()
+	lives sample_life()
 	{
-		samples lives = samples();
-		samples lst;
+		lives lives_lst = lives();
+		lives lst;
 
 		if (this->turn < 1 or (this->turn - 1) % 10)
-			lst = { (int)(this->sim_time + 1), 1 };
+			lst = { this->sim_time + 1, 0.000001 };
 		else
 			/*
 			 * TODO
 			 * Similar story here with SanityCheckSampler1
 			 */
-			lst = { (int)(this->sim_time + 1), (int)(this->sim_time + 1) };
+			lst = { this->sim_time + 1, this->sim_time + 1 };
 		this->turn++;
 
 		for (int i = 0; i < 14; i++)
-			lives.insert(lives.end(), lst.begin(), lst.end());
+			lives_lst.insert(lives_lst.end(), lst.begin(), lst.end());
 
-		return lives;
+		return lives_lst;
 	}
 };
 
