@@ -186,6 +186,7 @@ public:
 		return tuple(this->sample_size(), this->sample_life());
 	}
 
+private:
 	samples sample_size()
 	{
 		if (this->turn < 1 or !(this->turn % 2))
@@ -231,6 +232,12 @@ public:
 		this->turn = 0;
 	}
 
+	tuple get_size_age_sample(const int num_samples)
+	{
+		return tuple(this->sample_size(), this->sample_life());
+	}
+
+private:
 	samples sample_size()
 	{
 		samples sizes = samples();
