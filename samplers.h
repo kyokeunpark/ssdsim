@@ -10,8 +10,8 @@
 
 // Some sizes/lives return integer and some returns float.
 // Hence, let it be type of float to remove any problems
-using sizes = std::vector<double>;
-using lives = std::vector<double>;
+using sizes = std::vector<float>;
+using lives = std::vector<float>;
 using tuple = std::pair<sizes, lives>;
 
 static inline int randint(int min, int max)
@@ -26,11 +26,11 @@ class Sampler
 {
 
 protected:
-	double sim_time;
+	float sim_time;
 	unsigned seed;
 
 public:
-	Sampler(double sim_time)
+	Sampler(float sim_time)
 	{
 		this->sim_time = sim_time;
 		this->seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -48,7 +48,7 @@ class SimpleSampler: public Sampler
 {
 
 public:
-	SimpleSampler(double sim_time): Sampler(sim_time) {}
+	SimpleSampler(float sim_time): Sampler(sim_time) {}
 
 	tuple get_size_age_sample(const int num_samples = 1)
 	{
@@ -144,7 +144,7 @@ class DeterministicDistributionSampler: public SimpleSampler
 {
 
 public:
-	DeterministicDistributionSampler(double sim_time): SimpleSampler(sim_time)
+	DeterministicDistributionSampler(float sim_time): SimpleSampler(sim_time)
 	{
 		this->seed = 0;
 		srand(0);
@@ -178,7 +178,7 @@ class SanityCheckSampler1: public Sampler
 	int turn;
 
 public:
-	SanityCheckSampler1(const double sim_time, const float obj_size):
+	SanityCheckSampler1(const float sim_time, const float obj_size):
 		Sampler(sim_time)
 	{
 		this->obj_size = obj_size;
@@ -222,7 +222,7 @@ class StripeLevelSanityCheckSampler2: public Sampler
 	int ext_size, turn;
 
 public:
-	StripeLevelSanityCheckSampler2(const double sim_time, const int ext_size):
+	StripeLevelSanityCheckSampler2(const float sim_time, const int ext_size):
 		Sampler(sim_time)
 	{
 		this->ext_size = ext_size;
@@ -238,8 +238,8 @@ private:
 	sizes sample_size()
 	{
 		sizes sizes_lst = sizes();
-		sizes lst = { (0.9 * this->ext_size),
-					(this->ext_size - 0.9 * this->ext_size) };
+		sizes lst = { (float)(0.9 * this->ext_size),
+					(float)(this->ext_size - 0.9 * this->ext_size) };
 		for (int i = 0; i < 14; i++)
 			sizes_lst.insert(sizes_lst.end(), lst.begin(), lst.end());
 		return sizes_lst;
