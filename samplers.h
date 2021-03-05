@@ -271,6 +271,6 @@ private:
 
 		return lives;
 	}
-}
+};
 
 #endif // __SAMPLERS_H_
