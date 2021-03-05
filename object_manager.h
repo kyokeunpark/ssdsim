@@ -1,6 +1,6 @@
 #include "stripe.h"
 #include "event_manager.h"
-#include "sampler.h"
+#include "samplers.h"
 #include "config.h"
 #include <random>
 
@@ -21,8 +21,8 @@ class ObjectManager{
         vector <Extent_Object *> create_new_object(int num_samples = 1){
             vector <Extent_Object *> new_objs = vector<Extent_Object *>();
             auto size_age_samples = sampler->get_size_age_sample();
-            samples size_samples = size_age_samples.first;
-            samples life_samples = size_age_samples.second;
+            sizes size_samples = size_age_samples.first;
+            lives life_samples = size_age_samples.second;
             for(int i = 0; i < size_samples.size(); i++)
             {
                 int size = size_samples[i];
