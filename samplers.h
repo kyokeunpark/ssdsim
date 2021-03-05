@@ -206,14 +206,7 @@ private:
 	{
 		if (this->turn < 1 || !(this->turn % 2)) {
 			this->turn++;
-
-			/*
-			 * TODO
-			 * Original Python code returns [ self.sim_time + 1, 0.00001 ].
-			 * Looking at the other implementation of this function,
-			 * they return list of INTEGERS.
-			 */
-			return { this->sim_time + 1, 0.000001 };
+			return { this->sim_time + 1, 0.00001 };
 		} else {
 			this->turn++;
 			return { this->sim_time + 1 };
@@ -261,12 +254,8 @@ private:
 		lives lst;
 
 		if (this->turn < 1 or (this->turn - 1) % 10)
-			lst = { this->sim_time + 1, 0.000001 };
+			lst = { this->sim_time + 1, 0.00001 };
 		else
-			/*
-			 * TODO
-			 * Similar story here with SanityCheckSampler1
-			 */
 			lst = { this->sim_time + 1, this->sim_time + 1 };
 		this->turn++;
 
