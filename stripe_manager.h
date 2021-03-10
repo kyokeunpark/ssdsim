@@ -1,3 +1,4 @@
+#pragma once
 #include "stripe.h"
 #include "config.h"
 //get_extents(stripe id) not used anywhere not implemented

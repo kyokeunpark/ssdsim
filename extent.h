@@ -1,5 +1,5 @@
+#pragma once
 #include <unordered_map>
-
 #include "extent_object.h"
 using namespace std;
 class Extent {

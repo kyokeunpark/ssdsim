@@ -15,7 +15,7 @@ class ExtentManager{
 
         Extent * create_extent(int s = 0, int secondary_threshold=15){
             Extent * e;
-            if(s = 0){
+            if(s == 0){
                 e = new Extent(ext_size, secondary_threshold);
             }else{
                 e = new Extent(s, secondary_threshold);

@@ -10,7 +10,7 @@ class ExtentStack{
         ExtentStack(StripeManager * s_m):stripe_manager(s_m), 
         extent_stack(new map<extent_stack_key_type, list<extent_stack_value_type>*>())
         {}
-        virtual int num_stripes() = 0;
+        virtual int num_stripes(int stripe_size) = 0;
         virtual list<Extent *> pop_stripe_num_exts(int stripe_size) = 0;
         void add_extent(extent_stack_key_type key, extent_stack_value_type ext)
         {
@@ -198,6 +198,7 @@ typedef list<Extent *>* extent_stack_ext_lst;
 class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
 {
     using ExtentStack::ExtentStack;
+
     int num_stripes(int stripe_size)
     {
         return get_length_of_extent_stack()/stripe_size;
@@ -251,7 +252,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
     }
 
     /*error prone double check*/
-    list<Extent *> pop_stripe_num_exts(int stripe_size) 
+    list<Extent *> pop_stripe_num_exts(int stripe_size) override
     {
         list<Extent *> ret;
         int num_left_to_add = stripe_size;
