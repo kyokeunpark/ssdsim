@@ -1,3 +1,4 @@
+#pragma once
 class Extent_Object_Shard {
     public:
         int shard_size;

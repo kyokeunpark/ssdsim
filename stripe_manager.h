@@ -1,3 +1,4 @@
+#pragma once
 #include "stripe.h"
 #include "config.h"
 //get_extents(stripe id) not used anywhere not implemented
@@ -33,12 +34,12 @@ class StripeManager{
             {
                 dc_size += stripe->ext_size * num_data_exts_per_stripe;
             }
-            fprintf(stderr, "dc size: %f %f\n", TIME, dc_size);
+            fprintf(stderr, "dc size: %d %d\n", TIME, dc_size);
             return dc_size;
         }
 
         double get_total_dc_size(){
-            fprintf(stderr, "dc total size: %f %f\n", TIME, get_data_dc_size() * coding_overhead);
+            fprintf(stderr, "dc total size: %d %f\n", TIME, get_data_dc_size() * coding_overhead);
             return get_data_dc_size() * coding_overhead;
         }
         

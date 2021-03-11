@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "samplers.h"
+#include "stripers.h"
 
 using extent_lst = std::vector<int>;
 
