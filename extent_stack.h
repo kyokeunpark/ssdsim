@@ -1,6 +1,24 @@
 #include "stripe_manager.h"
 #include <map>
 #include <list>
+#include <algorithm>
+
+/*
+ * Struct used to check if a pointer to an extent exists within a
+ * list of extents. It is kind of a hack, but works well, given the current
+ * structure of the ExtentStack class.
+ */
+struct isExtent {
+    Extent * extent;
+
+    isExtent(Extent * e) : extent(e) {}
+
+    bool operator()(const Extent * e) const
+    {
+        return this->extent == e;
+    }
+};
+
 template <class extent_stack_value_type, class extent_stack_key_type>
 class ExtentStack{
     public:
@@ -326,7 +344,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
         for(auto& kv : *extent_stack){
             for(extent_stack_ext_lst l : *kv.second)
             {
-                if(find(l->begin(), l->end(), extent) != l->end())
+                if(find_if(l->begin(), l->end(), isExtent(extent)) != l->end())
                 {
                     return true;
                 }

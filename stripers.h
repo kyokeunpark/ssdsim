@@ -2,6 +2,17 @@
 #include "extent_manager.h"
 #include "extent_stack.h"
 #include <array>
+
+typedef struct replacement_costs {
+    int global_parity_reads;
+    int global_parity_writes;
+    int local_parity_reads;
+    int local_parity_writes;
+    int obsolete_data_reads;
+    int valid_obj_reads;
+    int absent_data_reads;
+} repl_costs;
+
 template<class es_v_T, class es_k_T, class sim_time_T>
 class AbstractStriper{
     public:
@@ -18,7 +29,7 @@ class AbstractStriper{
             (ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) = 0;
         virtual array<int,3>  create_stripe
             (ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) = 0;
-        virtual array<int,7>  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality) = 0;
+        virtual repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality) = 0;
         virtual double cost_to_write_data(int data) = 0;
         virtual int num_stripes_reqd() = 0;
 };
@@ -51,9 +62,11 @@ class SimpleStriper : public AbstractStriper<class es_v_T, class es_k_T, class s
             stripes += 1;
             return array<int, 3>{stripes, reads, writes};
         }
-        array<int,7>  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
+
+        repl_costs cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
         {
-            return {0, 0, 0, 0, 0, 0, 0};
+            repl_costs costs = {0, 0, 0, 0, 0, 0, 0};
+            return costs;
         }
         double cost_to_write_data(int data)
         {
@@ -110,7 +123,7 @@ class ExtentStackStriper: public AbstractStriperDecorator
         stripes += 1;
         return array<int, 3>{stripes, total_reads, total_writes};
     }
-    array<int,7>  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
+    repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
     {
         return striper->cost_to_replace_extents(ext_size, exts_per_locality, obs_data_per_locality);
     }
@@ -159,7 +172,7 @@ class NumStripesStriper: public AbstractStriperDecorator
         total_reads += res[1];
         return array<int, 3>{total_stripes, total_reads, total_writes};
     }
-    array<int,7>  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
+    repl_costs cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality)
     {
         return striper->cost_to_replace_extents(ext_size, exts_per_locality, obs_data_per_locality);
     }
@@ -202,16 +215,10 @@ class StriperWithEC: public AbstractStriperDecorator
         writes *= stripe_manager->coding_overhead;
         return array<int, 3>{stripes, reads, writes};
     }
-    array<int,7>  cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
+    repl_costs cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
                 vector<int>  obs_data_per_locality, vector<int>valid_objs_per_locality)
     {
-        int global_parity_reads = 0;
-        int global_parity_writes = 0;
-        int local_parity_reads = 0;
-        int local_parity_writes = 0;
-        int valid_obj_reads = 0;
-        int obsolete_data_reads = 0;
-        int absent_data_reads = 0;
+        repl_costs costs = {0, 0, 0, 0, 0, 0, 0};
         int total_exts_replaced = 0;
         for(int i = 0; i < exts_per_locality.size(); i++)
         {
@@ -219,34 +226,34 @@ class StriperWithEC: public AbstractStriperDecorator
         }
         if (total_exts_replaced == stripe_manager->num_data_exts_per_stripe)
         {
-            return array<int, 7>{ global_parity_reads, stripe_manager->num_global_parities * ext_size, local_parity_reads,
-                stripe_manager->num_local_parities * ext_size, obsolete_data_reads, valid_obj_reads, absent_data_reads};
+            costs.global_parity_writes = stripe_manager->num_global_parities * ext_size;
+            costs.local_parity_writes = stripe_manager->num_local_parities * ext_size;
+            return costs;
         }
         int num_exts_per_locality = stripe_manager->num_data_exts_per_locality;
         for(int i = 0; i < obs_data_per_locality.size(); i++)
         {
             int num_exts = exts_per_locality[i];
             if (num_exts == num_exts_per_locality){
-                valid_obj_reads += valid_objs_per_locality[i];
+                costs.valid_obj_reads += valid_objs_per_locality[i];
 
                 // read in obsolete data - needed for updating global parities
-                obsolete_data_reads += obs_data_per_locality[i];
+                costs.obsolete_data_reads += obs_data_per_locality[i];
                 // compute new parity block and write it out
-                local_parity_writes += ext_size;
+                costs.local_parity_writes += ext_size;
             }// replacing some extents in locality
             else if(num_exts != 0)
             {
-                valid_obj_reads += valid_objs_per_locality[i];
-                obsolete_data_reads += obs_data_per_locality[i];
-                local_parity_reads += ext_size;
-                local_parity_writes += ext_size;
+                costs.valid_obj_reads += valid_objs_per_locality[i];
+                costs.obsolete_data_reads += obs_data_per_locality[i];
+                costs.local_parity_reads += ext_size;
+                costs.local_parity_writes += ext_size;
             }
-            global_parity_reads += stripe_manager->num_global_parities * ext_size;
-            global_parity_writes += stripe_manager->num_global_parities * ext_size;
+            costs.global_parity_reads += stripe_manager->num_global_parities * ext_size;
+            costs.global_parity_writes += stripe_manager->num_global_parities * ext_size;
             num_times_default += 1;
         }
-        return array<int, 7>{global_parity_reads, global_parity_writes, 
-            local_parity_reads, local_parity_writes, obsolete_data_reads, valid_obj_reads, absent_data_reads};
+        return costs;
     }
     double cost_to_write_data(int data)
     {
@@ -258,27 +265,20 @@ class EfficientStriperWithEC: public StriperWithEC
 {
     using StriperWithEC::StriperWithEC;
 
-    array<int,7> cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
+    repl_costs cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
                 vector<int>  obs_data_per_locality, vector<int>valid_objs_per_locality)
     {
+        repl_costs costs = {0, 0, 0, 0, 0, 0, 0};
         int str1_ec_reads = 0;
-        int str2_ec_reads = 0;
-        int global_parity_reads = 0;
-        int global_parity_writes = 0;
-        int local_parity_reads = 0;
-        int local_parity_writes = 0;
-        int obsolete_data_reads = 0;
-        int absent_data_reads = 0;
-        int valid_obj_reads = 0;
-        int total_exts_replaced;
+        int total_exts_replaced = 0;
         for(int i = 0; i < exts_per_locality.size(); i++)
         {
             total_exts_replaced += exts_per_locality[i];
         }
         if (total_exts_replaced == stripe_manager->num_data_exts_per_stripe){
-            return array<int, 7>{global_parity_reads, stripe_manager->num_global_parities * ext_size,
-             local_parity_reads, stripe_manager->num_local_parities * ext_size, obsolete_data_reads,
-              valid_obj_reads, absent_data_reads};
+            costs.global_parity_writes = stripe_manager->num_global_parities * ext_size;
+            costs.local_parity_writes = stripe_manager->num_local_parities * ext_size;
+            return costs;
         }
         int num_exts_per_locality = stripe_manager->num_data_exts_per_locality;
         for(int i = 0 ; i < obs_data_per_locality.size(); i++)
@@ -286,43 +286,50 @@ class EfficientStriperWithEC: public StriperWithEC
             int num_exts = exts_per_locality[i];
             // whole locality is replaced
             if (num_exts == num_exts_per_locality){
-                valid_obj_reads += valid_objs_per_locality[i];
+                costs.valid_obj_reads += valid_objs_per_locality[i];
                 // read in obsolete data - needed for updating global parities
-                obsolete_data_reads += obs_data_per_locality[i];
+                costs.obsolete_data_reads += obs_data_per_locality[i];
                 // compute new parity block and write it out
-                local_parity_writes += ext_size;
+                costs.local_parity_writes += ext_size;
             }
             // replacing some extents in locality
             else if (num_exts != 0){
-                valid_obj_reads += valid_objs_per_locality[i];
+                costs.valid_obj_reads += valid_objs_per_locality[i];
 
                 // read in obsolete data
-                obsolete_data_reads += obs_data_per_locality[i];
+                costs.obsolete_data_reads += obs_data_per_locality[i];
                 // read in parity
-                local_parity_reads += ext_size;
+                costs.local_parity_reads += ext_size;
 
                 // in this strategy read in the extents not being gc'ed instead and recompute the parities from scratch
-                absent_data_reads += (num_exts_per_locality - num_exts) * ext_size;
+                costs.absent_data_reads += (num_exts_per_locality - num_exts) * ext_size;
 
                 // recompute and write out parity
-                local_parity_writes += ext_size;
+                costs.local_parity_writes += ext_size;
             }
             else if (num_exts == 0){
                 // need to bring in the extents from any locality not gc'ed to compute global parities
-                absent_data_reads += (num_exts_per_locality) * ext_size;
+                costs.absent_data_reads += (num_exts_per_locality) * ext_size;
             }
         }
-        global_parity_reads += stripe_manager->num_global_parities * ext_size;
-        global_parity_writes += stripe_manager->num_global_parities * ext_size;
-        str1_ec_reads = global_parity_reads + obsolete_data_reads + local_parity_reads;
-        if (str1_ec_reads < absent_data_reads)
+
+        costs.global_parity_reads += stripe_manager->num_global_parities * ext_size;
+        costs.global_parity_writes += stripe_manager->num_global_parities * ext_size;
+        str1_ec_reads = costs.global_parity_reads + costs.obsolete_data_reads
+                + costs.local_parity_reads;
+
+        if (str1_ec_reads < costs.absent_data_reads)
         {
             num_times_default += 1;
-            return array<int, 7> {global_parity_reads, global_parity_writes, local_parity_reads, 
-                local_parity_writes, obsolete_data_reads, valid_obj_reads, 0};
+            costs.absent_data_reads = 0;
+            return costs;
         }else {
             num_times_alternatives += 1;
-            return array<int, 7>{0, global_parity_writes, 0, local_parity_writes, 0, 0, absent_data_reads};
+            costs.global_parity_reads = 0;
+            costs.local_parity_reads = 0;
+            costs.obsolete_data_reads = 0;
+            costs.valid_obj_reads = 0;
+            return costs;
         }
     }
 };
