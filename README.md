@@ -4,9 +4,8 @@ SSD Simulator for CSC2233 Project @ University of Toronto
 ## Building
 
 ``` sh
-mkdir build
-cd build
-cmake ../
+mkdir build && cd build
+cmake ../ && make
 ```
 
 This will generate `simulator` and `test` binary within `build` directory.
