@@ -5,11 +5,14 @@ class ExtentManager{
     public:
         int ext_size;
         list<Extent *>* exts;
-
-        ExtentManager(int s):ext_size(s){
+        int (Extent::*key_fnc)();
+        ExtentManager(int s, int (Extent::*k_f)()):ext_size(s), key_fnc(k_f){
 
         }
-
+        int get_key(Extent * ext)
+        {
+            return (ext->*key_fnc)();
+        }
         int get_num_ext(){
             return exts->size();
         }

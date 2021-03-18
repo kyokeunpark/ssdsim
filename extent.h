@@ -1,18 +1,28 @@
 #pragma once
 #include <unordered_map>
 #include "extent_object.h"
-using namespace std;
 class Extent {
     public:
         double obsolete_space;
         double free_space;
         double ext_size;
+
         unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > * objects;
         int locality;
         int generation;
         time_t timestamp;
         string type;
         int secondary_threshold;
+
+        int get_default_key()
+        {
+            return 0;
+        }
+        
+        time_t get_timestamp()
+        {
+            return timestamp;
+        }
 
         Extent(int e_s, int s_t)
         :obsolete_space(0),free_space(e_s), ext_size(e_s),

@@ -11,10 +11,12 @@
 #include <variant>
 #include "samplers.h"
 // typedef int sim_T;
+template<class K>
 std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>, shared_ptr<ExtentManager>> create_managers
 	(const int num_data_exts, const int num_local_parities, 
 	const int num_global_parities, const int num_localities, const SimpleSampler * sampler, const int ext_size,
-	const int coding_overhead=0, const bool add_noise = false)
+	K (Extent::*key_fnc)(),
+	const float coding_overhead=0, const bool add_noise = false)
 {
 	shared_ptr<StripeManager> stripe_mngr;
 	if(coding_overhead != 0)
@@ -28,7 +30,7 @@ std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<Objec
 	}
     shared_ptr<EventManager> event_mngr = make_shared<EventManager>();
 	shared_ptr<ObjectManager> obj_mngr = make_shared<ObjectManager>(event_mngr, sampler, add_noise);
-    shared_ptr<ExtentManager> ext_mngr = make_shared<ExtentManager>(ext_size);
+    shared_ptr<ExtentManager> ext_mngr = key_fnc == make_shared<ExtentManager>(ext_size, key_fnc);
     return std::make_tuple(stripe_mngr, event_mngr, obj_mngr, ext_mngr);
 
 }
@@ -47,7 +49,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_no_exts_config(const unsigne
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key ,coding_overhead, false);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -83,7 +85,7 @@ DataCenter<Extent *, int, sim_T>  no_exts_mix_objs_config(const unsigned long da
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size, coding_overhead=coding_overhead);
+			ext_size,&Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -121,7 +123,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_confi
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, &Extent::get_default_key);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -156,7 +158,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_effic
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, &Extent::get_default_key);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -195,10 +197,11 @@ DataCenter<Extent *, int, sim_T>  age_based_config_no_exts(const unsigned long d
     float num_global_parities = 2/14;
     float num_local_parities = 2/14;
     int num_localities = 1;
+	time_t (Extent::*key_fnc)() = &Extent::get_timestamp;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, key_fnc, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -232,10 +235,11 @@ DataCenter<Extent *, int, sim_T>  age_based_config(const unsigned long data_cent
     float num_global_parities = 2;
     float num_local_parities = 2;
     int num_localities = 2;
+	time_t (Extent::*key_fnc)() = &Extent::get_timestamp;
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, key_fnc);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -273,7 +277,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_baseline_confi
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -311,7 +315,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_smaller_obj_co
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -348,7 +352,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_dy
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -386,7 +390,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T> size_based_whole_obj_config(const u
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, &Extent::get_default_key);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -423,7 +427,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_la
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -474,7 +478,7 @@ DataCenter<Extent *, int, sim_T>  mortal_immortal_no_exts_config(const unsigned 
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -513,7 +517,7 @@ DataCenter<Extent *, int, sim_T>  randomized_ext_placement_joined_pools_config(c
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, &Extent::get_default_key);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -552,7 +556,7 @@ DataCenter<Extent *, int, sim_T>  randomized_obj_placement_joined_pools_config(c
 	std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 			shared_ptr<ExtentManager>> mngrs 
 			= create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-			ext_size);
+			ext_size, &Extent::get_default_key);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -589,7 +593,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_config(const unsigned 
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, &Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -628,7 +632,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_mix_objs_config(const 
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size,&Extent::get_default_key, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -668,10 +672,11 @@ DataCenter<Extent *, int, sim_T>  age_based_rand_config_no_exts(const unsigned l
     float num_global_parities = 2/14;
     float num_local_parities = 2/14;
     int num_localities = 1;
+	time_t (Extent::*key_fnc)() = &Extent::get_timestamp;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size, coding_overhead=coding_overhead);
+		 ext_size, key_fnc, coding_overhead);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
