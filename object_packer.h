@@ -4,8 +4,10 @@
 #pragma once
 
 #include <unordered_map>
+#include <numeric>
 #include <utility>
 #include <vector>
+#include <cmath>
 #include "object_manager.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
@@ -109,7 +111,26 @@ public:
 	 */
 	string get_extent_type(Extent * extent)
 	{
-		return ""
+		// Find the largest object stored in the extent
+		int largest_obj = INT32_MIN, local_max = 0, num_objs = 0;
+		for (auto & tuple : extent->obj_ids_to_obj_size) {
+			std::vector<int> sizes = tuple.second;
+			local_max = std::accumulate(sizes.front(), sizes.end(), 0);
+			if (largest_obj < local_max) {
+				largest_obj = local_max;
+				num_objs = sizes.size();
+			}
+		}
+		if (largest_obj >= this->threshold / 100 * extent->ext_size
+				&& largest_obj < extent->ext_size) {
+			double frac = largest_obj / extent->ext_size;
+			return std::to_string(floor(frac) * 10) + "-"
+				+ std::to_string(ceil(frac) * 10);
+		} else if (largest_obj < this->threshold / 100 * extent->ext_size) {
+			return "small";
+		} else {
+			return "large";
+		}
 	}
 
 	void update_extent_type(Extent * extent)
@@ -118,8 +139,9 @@ public:
 		}
 	}
 
-	void add_obj_to_current_ext_at_key(ExtentStack extent_stack, Extent_Object * obj,
-			int obj_rem_size, int key)
+	template <class es_v, class es_k>
+	void add_obj_to_current_ext_at_key(ExtentStack<es_v, es_k>* extent_stack,
+			Extent_Object * obj, int obj_rem_size, int key)
 	{
 		int temp = 0;
 		if (this->current_exts.find(key) == this->current_exts.end())
@@ -157,8 +179,9 @@ public:
 
 	void pack_objects(ExtentStack extent_stack)
 	{
-		while(this->obj_pool.size > 0) {
-			obj_record obj = this->obj_pool.pop_back();
+		while(this->obj_pool.size() > 0) {
+			obj_record obj = this->obj_pool.back();
+			this->obj_pool.pop_back();
 		}
 		(void) extent_stack;
 	};

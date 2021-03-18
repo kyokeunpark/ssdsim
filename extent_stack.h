@@ -1,3 +1,5 @@
+#pragma once
+
 #include "stripe_manager.h"
 #include <map>
 #include <list>
