@@ -1,3 +1,4 @@
+#pragma once
 #include "stripe.h"
 #include "event_manager.h"
 #include "samplers.h"
@@ -7,11 +8,11 @@
 class ObjectManager{
     public:
         list<Extent_Object*>* objects;
-        EventManager * event_manager;
-        Sampler * sampler;
+        shared_ptr<EventManager> event_manager;
+        shared_ptr<Sampler> sampler;
         bool add_noise;
         
-        ObjectManager(EventManager * e_m, Sampler * s, bool a_n = true):
+        ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s, bool a_n = true):
         objects(new list<Extent_Object*>()), event_manager(e_m), sampler(s), add_noise(a_n){
             //np.random.seed(0)
             srand(0);

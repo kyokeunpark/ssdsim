@@ -1,3 +1,4 @@
+#pragma once
 #include "extent.h"
 #include <unordered_map>
 class ExtentManager{

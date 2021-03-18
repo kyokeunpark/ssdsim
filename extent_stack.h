@@ -1,8 +1,10 @@
+#pragma once
 #include "stripe_manager.h"
 #include <map>
 #include <list>
 #include <algorithm>
-
+#include <random>
+typedef list<Extent *>* extent_stack_ext_lst;
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
@@ -22,10 +24,11 @@ struct isExtent {
 template <class extent_stack_value_type, class extent_stack_key_type>
 class ExtentStack{
     public:
-        StripeManager * stripe_manager;
+        shared_ptr<StripeManager> stripe_manager;
         //ordered by key
         map<extent_stack_key_type, list<extent_stack_value_type>*> * extent_stack;
-        ExtentStack(StripeManager * s_m):stripe_manager(s_m), 
+        ExtentStack(){}
+        ExtentStack(shared_ptr<StripeManager> s_m):stripe_manager(s_m), 
         extent_stack(new map<extent_stack_key_type, list<extent_stack_value_type>*>())
         {}
         virtual int num_stripes(int stripe_size) = 0;
@@ -210,27 +213,84 @@ class BestEffortExtentStack:public SingleExtentStack
         return get_extent_at_key(prev_key);
     }
 };
-
-
-typedef list<Extent *>* extent_stack_ext_lst;
-class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
+template <class V, class K>
+class ExtentStackRandomizer: public ExtentStack<V,K>
 {
-    using ExtentStack::ExtentStack;
+    public: 
+        shared_ptr<ExtentStack<V,K>> extent_stack;
+        ExtentStackRandomizer(shared_ptr<ExtentStack<V,K>> e_s):extent_stack(e_s){}
+        int num_stripes(int stripe_size) override
+        {
+            return extent_stack->num_stripes(stripe_size);
+        }
+        void add_extent(V e, K k)
+        {
+            extent_stack->add_extent(e, k);
+        }
+        int get_length_at_key(K k) override
+        {
+            return extent_stack->get_length_at_key(k);
+        }
+        int get_length_of_extent_stack() override
+        {
+            return extent_stack->get_length_of_extent_stack();
+        }
+        bool contains_extent(Extent * extent) override
+        {
+            return extent_stack->contains_extent(extent);
+        }
+        void remove_extent(Extent * extent) override
+        {
+            extent_stack->remove_extent(extent);
+        }
+        list<Extent *> pop_stripe_num_exts(int stripe_size) override
+        {
+            for(auto& kv : *(extent_stack->extent_stack))
+            {
+                auto rng = std::default_random_engine {};
+                std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+            }
+            return extent_stack->pop_stripe_num_exts();
+        }
+        Extent * get_extent_at_closest_key(K key) 
+        {
+            for(auto& kv : *(extent_stack->extent_stack))
+            {
+                auto rng = std::default_random_engine {};
+                std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+            }
+            return extent_stack->get_extent_at_closest_key(key);
+        }
+        Extent * get_extent_at_key(K key) override
+        {
+            for(auto& kv : *(extent_stack->extent_stack))
+            {
+                auto rng = std::default_random_engine {};
+                std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+            }
+            return extent_stack->get_extent_at_key(key);
+        }
+};
 
-    int num_stripes(int stripe_size)
+template <class extent_stack_ext_lst, class K>
+class WholeObjectExtentStack:public ExtentStack<extent_stack_ext_lst, K>
+{
+    using ExtentStack<extent_stack_ext_lst, K>::ExtentStack;
+
+    int num_stripes(int stripe_size) override
     {
         return get_length_of_extent_stack()/stripe_size;
     }
 
     void add_extent(extent_stack_ext_lst ext_lst)
     {
-        int key = ext_lst->size();
-        extent_stack->emplace(key, new list<extent_stack_ext_lst>());
-        extent_stack->find(key)->second->push_back(ext_lst);
+        K key = ext_lst->size();
+        this->extent_stack->emplace(key, new list<extent_stack_ext_lst>());
+        this->extent_stack->find(key)->second->push_back(ext_lst);
     }
     int get_length_of_extent_stack() override{
         int length = 0;
-        for(auto& kv : * extent_stack)
+        for(auto& kv : * this->extent_stack)
         {
             for(extent_stack_ext_lst l : *kv.second)
             length += l->size();
@@ -246,8 +306,8 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
         int temp = num_left_to_add;
         while(temp > 0) 
         {
-            auto it = extent_stack->upper_bound(temp);
-            if(it != extent_stack->begin())
+            auto it = this->extent_stack->upper_bound(temp);
+            if(it != this->extent_stack->begin())
             {
                 it = prev(it);
             }
@@ -263,7 +323,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
             if(it->second->size() == 0)
             {
                 delete it->second;
-                extent_stack->erase(it->first);
+                this->extent_stack->erase(it->first);
             }
         }
         return ret;
@@ -278,9 +338,9 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
         {
             return ret;
         }
-        int largest_key = prev(extent_stack->end())->first;
-        extent_stack_ext_lst longest_lst = prev(extent_stack->end())->second->front();
-        prev(extent_stack->end())->second->pop_front();
+        int largest_key = prev(this->extent_stack->end())->first;
+        extent_stack_ext_lst longest_lst = prev(this->extent_stack->end())->second->front();
+        prev(this->extent_stack->end())->second->pop_front();
         for(int i = 0;i < (num_left_to_add > largest_key?largest_key:num_left_to_add); i++)
         {
             ret.push_back(longest_lst->front());
@@ -290,7 +350,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
         if(longest_lst->size() == 0)
         {
             delete longest_lst;
-            extent_stack->erase(largest_key);
+            this->extent_stack->erase(largest_key);
         }
         if(longest_lst->size() > 0)
         {
@@ -330,18 +390,18 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
    */
    Extent * get_extent_at_key(int k) override
    {
-       Extent * ext = extent_stack->begin()->second->front()->front();
-       extent_stack->begin()->second->pop_front();
-       if(extent_stack->begin()->second->size() == 0)
+       Extent * ext = this->extent_stack->begin()->second->front()->front();
+       this->extent_stack->begin()->second->pop_front();
+       if(this->extent_stack->begin()->second->size() == 0)
        {
-           extent_stack->erase(extent_stack->begin()->first);
+           this->extent_stack->erase(this->extent_stack->begin()->first);
        }
        return ext;
    }
 
     bool contains_extent(Extent * extent) override
     {
-        for(auto& kv : *extent_stack){
+        for(auto& kv : *this->extent_stack){
             for(extent_stack_ext_lst l : *kv.second)
             {
                 if(find_if(l->begin(), l->end(), isExtent(extent)) != l->end())
@@ -355,7 +415,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
 
     void remove_extent(Extent * extent) override
     {
-        for(auto& kv : *extent_stack){
+        for(auto& kv : *this->extent_stack){
             for(extent_stack_ext_lst l : *kv.second)
             {
                 auto it = find(l->begin(), l->end(), extent);
@@ -372,7 +432,7 @@ class WholeObjectExtentStack:ExtentStack<extent_stack_ext_lst, int>
             if(kv.second->size() == 0)
             {
                 delete kv.second;
-                extent_stack->erase(kv.first);
+                this->extent_stack->erase(kv.first);
             }
         }
     }

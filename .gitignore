@@ -33,3 +33,7 @@
 
 #vscode
 .vscode/
+
+build/*/
+build/*
+build/
