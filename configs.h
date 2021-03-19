@@ -613,7 +613,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_config(const unsigned 
     
 	shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key());
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
