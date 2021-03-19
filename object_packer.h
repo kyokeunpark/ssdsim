@@ -247,6 +247,35 @@ public:
 
 class SimpleGCObjectPacker: public SimpleObjectPacker {
 public:
+
+	/*
+	 * Can't generate a gc stripe on-demand.
+	 */
+	void generate_stripes(ExtentStack & extent_stack, int simulation_time)
+	{
+		return;
+	}
+
+	/*
+	 * Repacks objects from given extent
+	 */
+	void gc_extent(Extent * ext, ExtentStack & extent_stack,
+			object_lst objs=object_lst())
+	{
+		for (auto & obj : objs)
+			this->add_obj(obj.first, ext->get_obj_size(obj.first));
+		this->pack_objects(extent_stack, objs);
+	}
+
+	void pack_objects(ExtentStack & extent_stack, object_lst objs=object_lst(),
+			int key=0)
+	{
+		while(this->obj_pool.size() > 0) {
+			obj_record obj = this->obj_pool.back();
+			this->obj_pool.pop_back();
+			this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second, key);
+		}
+	}
 };
 
 #endif // __OBJECT_PACKER_H_
