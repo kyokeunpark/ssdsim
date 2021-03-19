@@ -298,8 +298,7 @@ class ExtentStackRandomizer: public AbstractExtentStack
 };
 
 
-typedef list<Extent *>* extent_stack_ext_lst;
-class WholeObjectExtentStack:AbstractExtentStack
+class WholeObjectExtentStack: public AbstractExtentStack
 {
     using AbstractExtentStack::AbstractExtentStack;
 

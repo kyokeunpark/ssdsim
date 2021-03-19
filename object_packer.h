@@ -206,7 +206,7 @@ public:
 				this->update_extent_type(current_ext);
 				current_ext->type = this->get_extent_type(current_ext);
 
-				extent_stack->add_extent(key, current_exts[key]);
+				extent_stack->add_extent(key, this->current_exts[key]);
 				current_ext = this->ext_manager.create_extent();
 				this->current_exts[key] = current_ext;
 			}
