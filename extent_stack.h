@@ -292,8 +292,8 @@ public:
             if(it != extent_stack.begin())
                 it = prev(it);
 
-            stack_lst & lst = it->second;
-            it->second.pop_front();
+            stack_val & lst = *it->second.begin();
+            it->second.begin()->pop_front();
             temp -= lst.size();
             for (auto e : lst)
             {
@@ -311,13 +311,14 @@ public:
     {
         stack_val ret;
         int num_left_to_add = stripe_size;
+
         if(get_length_of_extent_stack() < num_left_to_add)
-        {
             return ret;
-        }
+
         int largest_key = prev(extent_stack.end())->first;
-        stack_lst & longest_lst = prev(extent_stack.end())->second;
-        prev(extent_stack.end())->second.pop_front();
+        auto largest = prev(extent_stack.end());
+        stack_val longest_lst = *largest->second.begin();
+        largest->second.pop_front();
         for(int i = 0;i < (num_left_to_add > largest_key?largest_key:num_left_to_add); i++)
         {
             ret.push_back(longest_lst.front());
