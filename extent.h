@@ -24,6 +24,11 @@ class Extent {
             return timestamp;
         }
 
+        int get_generation()
+        {
+            return generation;
+        }
+
         Extent(int e_s, int s_t)
         :obsolete_space(0),free_space(e_s), ext_size(e_s),
         objects(new unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > () ),

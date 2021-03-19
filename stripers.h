@@ -1,3 +1,4 @@
+#pragma once
 #include "stripe_manager.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
@@ -26,9 +27,9 @@ class AbstractStriper{
             num_times_default(0){}
 
         virtual array<int,3> create_stripes
-            (ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) = 0;
+            (shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time);
         virtual array<int,3>  create_stripe
-            (ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time);
+            (shared_ptr<ExtentStack<es_v_T, es_k_T>>  extent_stack, sim_time_T * simulation_time);
         virtual repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality);
         virtual repl_costs cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
                 vector<int>  obs_data_per_locality, vector<int>valid_objs_per_locality);
@@ -44,7 +45,7 @@ class SimpleStriper : public AbstractStriper<class es_v_T, class es_k_T, class s
         {
             return 1;
         }
-        array<int,3> create_stripes(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+        array<int,3> create_stripes(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
         {
             int num_exts = stripe_manager->num_data_exts_per_stripe;
             int writes = 0;
@@ -92,7 +93,7 @@ class ExtentStackStriper: public AbstractStriperDecorator
         return 0;
     }
 
-    array<int,3> create_stripes(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripes(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
         int num_exts = stripe_manager->num_data_exts_per_stripe;
         int total_writes = 0;
@@ -109,7 +110,7 @@ class ExtentStackStriper: public AbstractStriperDecorator
         return array<int, 3>{stripes, total_reads, total_writes};
     }
 
-    array<int,3> create_stripe(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripe(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
         int num_exts = stripe_manager->num_data_exts_per_stripe;
         int total_writes = 0;
@@ -148,7 +149,7 @@ class NumStripesStriper: public AbstractStriperDecorator
         return num_stripes_per_cycle;
     }
 
-    array<int,3> create_stripes(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripes(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
         int total_writes = 0;
         int total_reads = 0;
@@ -163,7 +164,7 @@ class NumStripesStriper: public AbstractStriperDecorator
         return array<int, 3>{total_stripes, total_reads, total_writes};
     }
 
-    array<int,3> create_stripe(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripe(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
         int total_writes = 0;
         int total_stripes = 0;
@@ -198,7 +199,7 @@ class StriperWithEC: public AbstractStriperDecorator
         return striper->num_stripes_reqd();
     }
 
-    array<int,3> create_stripes(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripes(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
             array<int, 3> res = striper->create_stripes(extent_stack, simulation_time);
             int stripes = res[0];
@@ -208,7 +209,7 @@ class StriperWithEC: public AbstractStriperDecorator
         return array<int, 3>{stripes, reads, writes};
     }
 
-    array<int,3> create_stripe(ExtentStack<es_v_T, es_k_T> * extent_stack, sim_time_T * simulation_time) override
+    array<int,3> create_stripe(shared_ptr<ExtentStack<es_v_T, es_k_T>> extent_stack, sim_time_T * simulation_time) override
     {
         array<int, 3> res = striper->create_stripe(extent_stack, simulation_time);
         int stripes = res[0];

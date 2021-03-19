@@ -3,7 +3,7 @@
 
 #include "samplers.h"
 #include "stripers.h"
-
+#include "configs.h"
 using extent_lst = std::vector<int>;
 
 int main(int argc, char *argv[]) {

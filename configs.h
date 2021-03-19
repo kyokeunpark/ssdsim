@@ -34,7 +34,7 @@ std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<Objec
     return std::make_tuple(stripe_mngr, event_mngr, obj_mngr, ext_mngr);
 
 }
-typedef int sim_T;
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  stripe_level_with_no_exts_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -70,7 +70,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_no_exts_config(const unsigne
 
     return data_center;
 }
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  no_exts_mix_objs_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -109,7 +109,7 @@ DataCenter<Extent *, int, sim_T>  no_exts_mix_objs_config(const unsigned long da
 
     return data_center;
 }
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -144,7 +144,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_confi
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_efficient_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -179,13 +179,13 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_effic
     return data_center;
 }
 
-
+template <class sim_T>
 sim_T get_timestamp()
 {
 	return (sim_T)TIME;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  age_based_config_no_exts(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -213,8 +213,7 @@ DataCenter<Extent *, int, sim_T>  age_based_config_no_exts(const unsigned long d
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
-	sim_T default_key = get_timestamp();
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = BestEffortStripingProcessCoordinator<Extent *, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, default_key);
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = BestEffortStripingProcessCoordinator<Extent *, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -224,7 +223,14 @@ DataCenter<Extent *, int, sim_T>  age_based_config_no_exts(const unsigned long d
     return data_center;
 }
 
+template <class sim_T>
+sim_T get_time()
+{
+	return (sim_T)TIME;
+}
 
+
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  age_based_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -250,9 +256,7 @@ DataCenter<Extent *, int, sim_T>  age_based_config(const unsigned long data_cent
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs);
     shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = extent_stack;
-	
-	sim_T default_key = get_timestamp();
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, default_key);
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_time<int>);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -262,7 +266,7 @@ DataCenter<Extent *, int, sim_T>  age_based_config(const unsigned long data_cent
 }
 
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_baseline_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -300,7 +304,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_baseline_confi
 }
 
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_smaller_obj_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -319,8 +323,9 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_smaller_obj_co
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
-    shared_ptr<AbstractStriperDecorator> striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
+	shared_ptr<EventManager> event_mngr = std::get<shared_ptr<EventManager>>(mngrs);
 
+    shared_ptr<AbstractStriperDecorator> striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SizeBasedObjectPackerSmallerObj>(obj_mngr, ext_mngr, num_objs, primary_threshold, true);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerSmallerObj>(obj_mngr, ext_mngr, num_objs, primary_threshold, true);
@@ -337,7 +342,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_smaller_obj_co
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_dynamic_strategy_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -376,7 +381,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_dy
 
 
 
-
+template <class sim_T>
 DataCenter<extent_stack_ext_lst, int, sim_T> size_based_whole_obj_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -412,7 +417,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T> size_based_whole_obj_config(const u
 }
 
 
-
+template <class sim_T>
 DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_larger_whole_obj_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -464,6 +469,7 @@ percent_correct = 90
 percent_correct = 80
 percent_correct = 70
 percent_correct = 60*/
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  mortal_immortal_no_exts_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -487,12 +493,12 @@ DataCenter<Extent *, int, sim_T>  mortal_immortal_no_exts_config(const unsigned 
     shared_ptr<AbstractStriperDecorator> striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
-    shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MortalImmortalObjectPacker>(obj_mngr, ext_mngr, num_objs, percent_correct=percent_correct);
-    shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<MortalImmortalGCObjectPacker>(obj_mngr, ext_mngr, num_objs, percent_correct=percent_correct);
+    shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MortalImmortalObjectPacker>(obj_mngr, ext_mngr, num_objs, percent_correct);
+    shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<MortalImmortalGCObjectPacker>(obj_mngr, ext_mngr, num_objs, percent_correct);
     
 	shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key());
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -503,7 +509,7 @@ DataCenter<Extent *, int, sim_T>  mortal_immortal_no_exts_config(const unsigned 
 }
 
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  randomized_ext_placement_joined_pools_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -542,7 +548,7 @@ DataCenter<Extent *, int, sim_T>  randomized_ext_placement_joined_pools_config(c
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  randomized_obj_placement_joined_pools_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -578,7 +584,7 @@ DataCenter<Extent *, int, sim_T>  randomized_obj_placement_joined_pools_config(c
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -617,7 +623,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_config(const unsigned 
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_mix_objs_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -660,7 +666,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_mix_objs_config(const 
     return data_center;
 }
 
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  age_based_rand_config_no_exts(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -690,7 +696,7 @@ DataCenter<Extent *, int, sim_T>  age_based_rand_config_no_exts(const unsigned l
     
 	shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp());
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -706,7 +712,7 @@ int default_key()
 	return 0;
 }
     
-
+template <class sim_T>
 DataCenter<Extent *, int, sim_T>  generational_config(const unsigned long data_center_size,
 			const float striping_cycle, const float simul_time, const int ext_size,
 			const short primary_threshold, const short secondary_threshold,
@@ -717,10 +723,11 @@ DataCenter<Extent *, int, sim_T>  generational_config(const unsigned long data_c
     float num_global_parities = 2;
     float num_local_parities = 2;
     int num_localities = 2;
+	int (Extent::*key_fnc)() = &Extent::get_generation;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>,
 		 shared_ptr<ExtentManager>> mngrs 
 		 = create_managers(num_data_exts, num_local_parities, num_global_parities, num_localities, sampler, 
-		 ext_size);
+		 ext_size, key_fnc);
 	shared_ptr<StripeManager> stripe_mngr = std::get<shared_ptr<StripeManager>>(mngrs);
 	shared_ptr<ExtentManager> ext_mngr = std::get<shared_ptr<ExtentManager>>(mngrs);
 	shared_ptr<ObjectManager> obj_mngr = std::get<shared_ptr<ObjectManager>>(mngrs);
@@ -736,7 +743,7 @@ DataCenter<Extent *, int, sim_T>  generational_config(const unsigned long data_c
     current_exts->emplace(0, ext_mngr->create_extent());
 	shared_ptr<ExtentStack<Extent *, int>> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<ExtentStack<Extent *, int>> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp());
+ 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/

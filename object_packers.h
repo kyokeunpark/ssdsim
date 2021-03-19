@@ -1,3 +1,4 @@
+#pragma once
 #include "extent_object.h"
 #include "object_manager.h"
 #include "extent_manager.h"

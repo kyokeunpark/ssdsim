@@ -1,10 +1,11 @@
 #ifndef __DATA_CENTER_H_
 #define __DATA_CENTER_H_
+#pragma once
 #include "object_manager.h"
 #include "stripers.h"
 #include "stripe_manager.h"
 #include "extent_manager.h"
-#include "object_manger.h"
+#include "object_manager.h"
 #include "event_manager.h"
 #include "gc_strategies.h"
 #include "striping_process_coordinator.h"

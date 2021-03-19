@@ -164,13 +164,13 @@ class BestEffortStripingProcessCoordinator
     :public StripingProcessCoordinator<extent_stack_value_type, extent_stack_key_type, sim_T>
 {
     public:
-        extent_stack_key_type default_key;
+        extent_stack_key_type (*default_key)();
         BestEffortStripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
             shared_ptr<SimpleGCObjectPacker> gc_o_p,
             shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
             shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>> e_s, 
             shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>>gc_e_s,  
-            shared_ptr<StripeManager> s_m, sim_T s_t,extent_stack_key_type key)
+            shared_ptr<StripeManager> s_m, sim_T s_t,extent_stack_key_type (*key)() )
             :StripingProcessCoordinator<extent_stack_value_type, extent_stack_key_type, sim_T>
                 (o_p, gc_o_p,s,gc_s,e_s,gc_e_s,s_m, s_t), default_key(key)
         {}
@@ -185,7 +185,7 @@ class BestEffortStripingProcessCoordinator
             {
                 return this->extent_stack->get_extent_at_closest_key(key);
             }else {
-                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key);
+                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key());
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
                 
@@ -202,12 +202,28 @@ class BestEffortStripingProcessCoordinator
                 return this->gc_extent_stack->get_extent_at_closest_key(key);
             }else
             {
-                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key);
+                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key());
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
                 
         }
             
     }
+    Stripe * get_stripe(extent_stack_key_type key=0)
+    {
+        int num_exts_per_stripe = this->stripe_manager->num_data_exts_per_stripe;
+        int num_exts = this->extent_stack->get_length_of_extent_stack();
+        if (num_exts >= num_exts_per_stripe)
+        {
+            return this->striper->create_stripe(this->extent_stack, this->simulation_time);
+        }
+        else
+        {
+            this->object_packer->generate_exts_at_key(this->extent_stack, num_exts_per_stripe, default_key());
+            return this->striper->create_stripe(this->extent_stack, this->simulation_time);
+        }
+    }
+        
+
         
 };
