@@ -134,7 +134,7 @@ public:
 	void update_extent_type(Extent * extent)
 	{
 		if (this->record_ext_types) {
-			string ext_type = this->get_extent_type(ext);
+			string ext_type = this->get_extent_type(extent);
 
 			if (this->ext_types.find(ext_type) != this->ext_types.end())
 				this->ext_types[ext_type] += 1;
@@ -169,7 +169,7 @@ public:
 			object_lst objs = this->obj_manager.create_new_object(this->num_objs_in_pool - this->obj_pool.size());
 			this->add_objs(objs);
 		}
-		this->pack_objects(extent_stack)
+		this->pack_objects(extent_stack);
 	}
 
 	/*
@@ -201,7 +201,7 @@ public:
 				this->update_extent_type(current_ext);
 				current_ext->type = this->get_extent_type(current_ext);
 
-				extent_stack.add_extent(this->current_exts[key], key);
+				extent_stack.add_extent(key, this->current_exts[key]);
 				current_ext = this->ext_manager.create_extent();
 				this->current_exts[key] = current_ext;
 			}
