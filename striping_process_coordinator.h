@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #pragma once
 #include "extent_object.h"
 #include "object_packers.h"
@@ -227,3 +228,16 @@ class BestEffortStripingProcessCoordinator
 
         
 };
+=======
+#ifndef __STRIPING_PROCESS_COORDINATOR_H_
+#define __STRIPING_PROCESS_COORDINATOR_H_
+
+#include "extent_stack.h"
+#include "stripe_manager.h"
+
+class StripingProcessCoordinator {
+
+};
+
+#endif // __STRIPING_PROCESS_COORDINATOR_H_
+>>>>>>> 7f6401ec5b7c9cc930845fb8eb9b5b5fe1528bc6

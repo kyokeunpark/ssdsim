@@ -1,6 +1,8 @@
 #pragma once
 #include <unordered_map>
 #include "extent_object.h"
+
+using namespace std;
 class Extent {
     public:
         double obsolete_space;
@@ -8,6 +10,7 @@ class Extent {
         double ext_size;
 
         unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > * objects;
+        unordered_map<int, vector<int>> obj_ids_to_obj_size;
         int locality;
         int generation;
         time_t timestamp;
@@ -64,25 +67,26 @@ class Extent {
         int add_object(Extent_Object* obj, int size, int generation = 0)
         {
             int temp_size = size < free_space?size:free_space;
+            int obj_id = obj->id;
             if(!timestamp)
-            {
                 timestamp = obj->creation_time;
-            }else if(obj->creation_time < timestamp)
-            {
+            else if(obj->creation_time < timestamp)
                 timestamp = obj->creation_time;
-            }
 
             if(!generation)
-            {
                 this->generation = obj->generation;
-            }else if(generation > this->generation)
-            {
+            else if(generation > this->generation)
                 this->generation = obj->generation;
+
+            if (this->obj_ids_to_obj_size.find(obj_id) != this->obj_ids_to_obj_size.end()) {
+                this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
+            } else {
+                this->obj_ids_to_obj_size[obj_id] = { temp_size };
+                Extent_Object_Shard* new_shard = new Extent_Object_Shard(size);
+                obj->shards->push_back(new_shard);
+                this->objects->emplace(std::make_pair(obj, new list<Extent_Object_Shard*>()));
+                this->objects->find(obj)->second->push_back(new_shard);
             }
-            Extent_Object_Shard* new_shard = new Extent_Object_Shard(size);
-            obj->shards->push_back(new_shard);
-            objects->emplace(std::make_pair(obj, new list<Extent_Object_Shard*>()));
-            objects->find(obj)->second->push_back(new_shard);
             free_space -= temp_size;
             return temp_size;
         }

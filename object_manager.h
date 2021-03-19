@@ -5,6 +5,9 @@
 #include "config.h"
 #include <random>
 
+using obj_record = std::pair<Extent_Object*, int>;
+using object_lst = std::vector<obj_record>;
+
 class ObjectManager{
     public:
         list<Extent_Object*>* objects;
@@ -19,8 +22,8 @@ class ObjectManager{
         }
 
         //docstring and code doesnt match managers.py
-        vector <Extent_Object *> create_new_object(int num_samples = 1){
-            vector <Extent_Object *> new_objs = vector<Extent_Object *>();
+        object_lst create_new_object(int num_samples = 1){
+            object_lst new_objs = object_lst();
             auto size_age_samples = sampler->get_size_age_sample();
             sizes size_samples = size_age_samples.first;
             lives life_samples = size_age_samples.second;
@@ -36,7 +39,8 @@ class ObjectManager{
                 }
                 life += TIME;
                 Extent_Object * obj = new Extent_Object(size, life);
-                new_objs.push_back(obj);
+                new_objs.emplace_back(std::make_pair(obj, size));
+                this->objects->push_back(obj);
                 event_manager->put_event(life, obj);
             }
             return new_objs;

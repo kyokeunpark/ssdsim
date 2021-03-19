@@ -1,12 +1,18 @@
+#ifndef __OBJECT_PACKER_H_
+#define __OBJECT_PACKER_H_
+
 #pragma once
-#include "extent_object.h"
+
+#include <unordered_map>
+#include <numeric>
+#include <utility>
+#include <vector>
+#include <cmath>
 #include "object_manager.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
-#include <cstdlib>
-#include <map>
-#include <list>
-#include <memory>
+#include "extent_object.h"
+#include "extent.h"
 
 using current_extents = std::unordered_map<int, Extent*>;
 using ext_types_mgr = std::unordered_map<string, int>;
@@ -211,109 +217,36 @@ public:
 	// TODO: extent_stack might need to be a pointer here
 };
 
-class MixedObjObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
+/*
+ * Packs objects into extents. For now I am only making a place-holder for the
+ * actual object that would pack objects based on a given optimal policy. In
+ * this simple code I only add objects from the object_pool, to the
+ * current_extents in a fifo scheme. As a result, this is equivalent to
+ * having only a single current extent at a time.
+ */
+class SimpleObjectPacker: public GenericObjectPacker {
+
+public:
+
+	SimpleObjectPacker(ObjectManager & obj_manager, ExtentManager & ext_manager,
+			object_lst obj_pool = object_lst(), current_extents current_exts = current_extents(),
+			short num_objs_in_pool = 100, short threshold = 10, bool record_ext_types = false)
+		: GenericObjectPacker(obj_manager, ext_manager, obj_pool, current_exts,
+				num_objs_in_pool, threshold, record_ext_types) {}
+
+	void pack_objects(ExtentStack & extent_stack, int key=0)
+	{
+		while(this->obj_pool.size() > 0) {
+			obj_record obj = this->obj_pool.back();
+			this->obj_pool.pop_back();
+			this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second, key);
+		}
+	};
+
 };
 
-class MixedObjGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+class SimpleGCObjectPacker: public SimpleObjectPacker {
+public:
 };
 
-class AgeBasedObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class AgeBasedGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class SizeBasedObjectPackerBaseline:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class SizeBasedGCObjectPackerBaseline:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class SizeBasedObjectPackerSmallerObj:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class SizeBasedGCObjectPackerSmallerObj:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-class SizeBasedObjectPackerDynamicStrategy:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-class SizeBasedGCObjectPackerDynamicStrategy:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class SizeBasedObjectPackerSmallerWholeObjFillGap:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-class SizeBasedGCObjectPackerSmallerWholeObjFillGap:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class SizeBasedObjectPackerLargerWholeObj:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class SizeBasedGCObjectPackerLargerWholeObj:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class MortalImmortalObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class MortalImmortalGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class RandomizedObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class RandomizedGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class AgeBasedRandomizedObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class AgeBasedRandomizedGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class GenerationBasedObjectPacker:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class GenerationBasedGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
+#endif // __OBJECT_PACKER_H_

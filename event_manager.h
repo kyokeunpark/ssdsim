@@ -24,8 +24,8 @@ class EventManager{
                 events->emplace(e);
             }
         }
-        void empty(){
-            events->empty();
+        bool empty(){
+            return events->empty();
         }
 
 };

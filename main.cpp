@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "object_packer.h"
 #include "samplers.h"
 #include "stripers.h"
 #include "configs.h"

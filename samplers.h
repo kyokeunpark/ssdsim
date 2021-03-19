@@ -12,7 +12,7 @@
 // Hence, let it be type of float to remove any problems
 using sizes = std::vector<float>;
 using lives = std::vector<float>;
-using sl_tuple = std::pair<sizes, lives>;
+using sample_pair = std::pair<sizes, lives>;
 
 static inline int randint(int min, int max)
 {
@@ -37,10 +37,10 @@ public:
 	}
 
 	/*
-	 * Returns a sl_tuple with object size and life
+	 * Returns a sample_pair with object size and life
 	 * @param: sim_time float
 	 */
-	virtual sl_tuple get_size_age_sample(const int num_samples = 1) = 0;
+	virtual sample_pair get_size_age_sample(const int num_samples = 1) = 0;
 
 };
 
@@ -50,9 +50,9 @@ class SimpleSampler: public Sampler
 public:
 	SimpleSampler(float sim_time): Sampler(sim_time) {}
 
-	sl_tuple get_size_age_sample(const int num_samples = 1)
+	sample_pair get_size_age_sample(const int num_samples = 1)
 	{
-		return sl_tuple(this->sample_size(num_samples), this->sample_life(num_samples));
+		return sample_pair(this->sample_size(num_samples), this->sample_life(num_samples));
 	}
 
 private:
@@ -185,9 +185,9 @@ public:
 		this->turn = 0;
 	}
 
-	sl_tuple get_size_age_sample(const int num_samples)
+	sample_pair get_size_age_sample(const int num_samples)
 	{
-		return sl_tuple(this->sample_size(), this->sample_life());
+		return sample_pair(this->sample_size(), this->sample_life());
 	}
 
 private:
@@ -229,9 +229,9 @@ public:
 		this->turn = 0;
 	}
 
-	sl_tuple get_size_age_sample(const int num_samples)
+	sample_pair get_size_age_sample(const int num_samples)
 	{
-		return sl_tuple(this->sample_size(), this->sample_life());
+		return sample_pair(this->sample_size(), this->sample_life());
 	}
 
 private:
