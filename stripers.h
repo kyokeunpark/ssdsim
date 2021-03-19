@@ -81,7 +81,7 @@ class AbstractStriperDecorator:public AbstractStriper<class es_v_T, class es_k_T
 {
     public:
         shared_ptr<AbstractStriper> striper;
-        AbstractStriperDecorator(shared_ptr<AbstractStriper> s):striper(s.get()){}
+        AbstractStriperDecorator(shared_ptr<AbstractStriper> s):striper(s){}
 };
 
 class ExtentStackStriper: public AbstractStriperDecorator

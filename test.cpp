@@ -4,7 +4,7 @@
 
 TEST(SamplerTest, SanityCheckSampler1Value) {
 	SanityCheckSampler1 sampler = SanityCheckSampler1(5, 5);
-	tuple t = sampler.get_size_age_sample(1);
+	sl_tuple t = sampler.get_size_age_sample(1);
 	sizes s = t.first;
 	lives l = t.second;
 

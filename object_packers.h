@@ -40,7 +40,7 @@ class GenericObjectPacker
         }
         void add_objs(unordered_map<Extent_Object*, double >  objlst)
         {
-            object_pool->emplace(object_pool->end(), objlst.begin(), objlst.end());
+            object_pool->insert(objlst.begin(), objlst.end());
         }
         virtual void pack_objects(ExtentStack<class V, class K> extent_stack, int key = 0) = 0;
 
@@ -58,7 +58,7 @@ class GenericObjectPacker
                 }
                 add_objs(objlst);
                 pack_objects(extent_stack);
-                num_exts_at_key = extent_stack.get_length_at_key(key);
+                num_exts_at_key = extent_stack->get_length_at_key(key);
             }
         } 
 
