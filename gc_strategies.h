@@ -2,6 +2,7 @@
 #define __GC_STRATEGIES_H_
 
 #include "extent_manager.h"
+#include "stripers.h"
 #include <unordered_map>
 
 class GarbageCollectionStrategy {

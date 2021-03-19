@@ -1,6 +1,9 @@
-#pragma once
-#include "extent_object.h"
+#ifndef __STRIPING_PROCESS_COORDINATOR_H_
+#define __STRIPING_PROCESS_COORDINATOR_H_
+
 #include "object_packer.h"
+#include "extent_stack.h"
+#include "stripers.h"
 #include "stripe_manager.h"
 #include "stripers.h"
 #include <memory>
@@ -11,24 +14,24 @@ class StripingProcessCoordinator{
         shared_ptr<SimpleGCObjectPacker> gc_object_packer;
         shared_ptr<AbstractStriperDecorator> striper;
         shared_ptr<AbstractStriperDecorator> gc_striper;
-        shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>> extent_stack;
-        shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>> gc_extent_stack;
+        shared_ptr<AbstractExtentStack> extent_stack;
+        shared_ptr<AbstractExtentStack> gc_extent_stack;
         shared_ptr<StripeManager> stripe_manager;
         sim_T simulation_time;
         StripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
             shared_ptr<SimpleGCObjectPacker> gc_o_p,
             shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
-            shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>> e_s, 
-            shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>>gc_e_s,  
+            shared_ptr<AbstractExtentStack> e_s, 
+            shared_ptr<AbstractExtentStack>gc_e_s,  
             shared_ptr<StripeManager> s_m, sim_T s_t):
             object_packer(o_p), gc_object_packer(gc_o_p), striper(s),
             gc_striper(gc_s), extent_stack(e_s), gc_extent_stack(gc_e_s), 
             stripe_manager(s_m), simulation_time(s_t)
         {}
 
-        void gc_extent(shared_ptr<Extent> ext, 
-            shared_ptr<ExtentStack<extent_stack_value_type, extent_stack_key_type>> extent_stack,
-            list<Extent_Object *> objs)
+        void gc_extent(Extent * ext, 
+            shared_ptr<AbstractExtentStack> extent_stack,
+            object_lst objs)
         {
             gc_object_packer->gc_extent(ext, extent_stack, objs);
 
@@ -70,7 +73,7 @@ class StripingProcessCoordinator{
         }
         array<int, 3> stripe_generator(shared_ptr<AbstractStriperDecorator> striper, 
             shared_ptr<SimpleObjectPacker> objecct_packer,
-            shared_ptr<ExtentStack<extent_stack_value_type, extent_stack_key_type>> extent_stack)
+            shared_ptr<AbstractExtentStack> extent_stack)
         {
             object_packer->generate_stripes(extent_stack, simulation_time);
             return striper->create_stripes(extent_stack, simulation_time);
@@ -80,19 +83,19 @@ class StripingProcessCoordinator{
         {
             object_packer->generate_exts_at_key(extent_stack, num_exts, key);
         }
-        void generate_exts()
+        void generate_extents()
         {
-            gc_object_packer->generate_extents();
+            gc_object_packer->generate_exts();
         }
         void generate_objs(int space)
         {
             gc_object_packer->generate_objs(space);
         }
 
-        map<string, int> get_ext_types()
+        ext_types_mgr get_ext_types()
         {
-            auto types = object_packer->ext_types;
-            auto gc_types = gc_object_packer->ext_types;
+            auto types = object_packer->get_ext_types();
+            auto gc_types = gc_object_packer->get_ext_types();
             for (auto & it: gc_types)
             {
                 if(types.find(it.first)!= types.end())
@@ -157,6 +160,8 @@ class StripingProcessCoordinator{
             int total = num_times_alternative + num_times_default;
             return array<double, 2>{num_times_default* 100.0/total , num_times_alternative * 100.0/total};
         }
+
+
 };
 
 template <class extent_stack_value_type, class extent_stack_key_type, class sim_T>
@@ -168,8 +173,8 @@ class BestEffortStripingProcessCoordinator
         BestEffortStripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
             shared_ptr<SimpleGCObjectPacker> gc_o_p,
             shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
-            shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>> e_s, 
-            shared_ptr<ExtentStack< extent_stack_value_type, extent_stack_key_type>>gc_e_s,  
+            shared_ptr<AbstractExtentStack> e_s, 
+            shared_ptr<AbstractExtentStack>gc_e_s,  
             shared_ptr<StripeManager> s_m, sim_T s_t,extent_stack_key_type (*key)() )
             :StripingProcessCoordinator<extent_stack_value_type, extent_stack_key_type, sim_T>
                 (o_p, gc_o_p,s,gc_s,e_s,gc_e_s,s_m, s_t), default_key(key)
@@ -227,3 +232,4 @@ class BestEffortStripingProcessCoordinator
 
         
 };
+#endif

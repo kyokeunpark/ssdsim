@@ -2,6 +2,7 @@
 #include "extent.h"
 #include <vector>
 using namespace std;
+using object_lst = std::vector<obj_record>;
 class Stripe{
     public:
         double obsolete;

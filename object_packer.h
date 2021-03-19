@@ -59,7 +59,13 @@ public:
 		{
 			this->ext_types = ext_types_mgr();
 		}
+	virtual void generate_exts()
+	{}
 
+	ext_types_mgr get_ext_types()
+	{
+		return ext_types;
+	}
 	/*
 	 * Add the object to the object pool. Need to specify the size since when
 	 * deleting from an extent only part of the object should be put back
@@ -145,14 +151,14 @@ public:
 	/*
 	 * The method generates num_exts at the extent list at the given key
 	 */
-	void generate_exts_at_key(shared_ptr<ExtentStack> extent_stack, int num_exts, int key)
+	void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack, int num_exts, int key)
 	{
-		int num_exts_at_key = extent_stack.get_length_at_key(key);
+		int num_exts_at_key = extent_stack->get_length_at_key(key);
 		while (num_exts_at_key < num_exts) {
 			object_lst objs = this->obj_manager.create_new_object();
 			this->add_objs(objs);
 			this->pack_objects(extent_stack);
-			num_exts_at_key = extent_stack.get_length_at_key(key);
+			num_exts_at_key = extent_stack->get_length_at_key(key);
 		}
 	}
 
@@ -162,13 +168,13 @@ public:
 	 * determine how to divide the extent stack into stripes (i.e., can extents
 	 * belonging to one key mix with extents from another)
 	 */
-	void generate_stripes(ExtentStack & extent_stack, int simulation_time)
+	void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack, int simulation_time)
 	{
 		if (this->obj_pool.size() < this->num_objs_in_pool) {
 			object_lst objs = this->obj_manager.create_new_object(this->num_objs_in_pool - this->obj_pool.size());
 			this->add_objs(objs);
 		}
-		this->pack_objects(extent_stack)
+		this->pack_objects(extent_stack);
 	}
 
 	/*
@@ -183,7 +189,7 @@ public:
 		}
 	}
 
-	void add_obj_to_current_ext_at_key(ExtentStack & extent_stack,
+	void add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
 			Extent_Object * obj, int obj_rem_size, int key)
 	{
 		int temp = 0;
@@ -200,7 +206,7 @@ public:
 				this->update_extent_type(current_ext);
 				current_ext->type = this->get_extent_type(current_ext);
 
-				extent_stack.add_extent(this->current_exts[key], key);
+				extent_stack->add_extent(key, current_exts[key]);
 				current_ext = this->ext_manager.create_extent();
 				this->current_exts[key] = current_ext;
 			}
@@ -212,7 +218,7 @@ public:
 	 * corresponding key for each object in current_extents and calls
 	 * add_obj_to_current_ext_at_key.
 	 */
-	virtual void pack_objects(ExtentStack & extent_stack) = 0;
+	virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack) = 0;
 	// TODO: extent_stack might need to be a pointer here
 };
 
@@ -233,7 +239,7 @@ public:
 		: GenericObjectPacker(obj_manager, ext_manager, obj_pool, current_exts,
 				num_objs_in_pool, threshold, record_ext_types) {}
 
-	void pack_objects(ExtentStack & extent_stack, int key=0)
+	void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, int key=0)
 	{
 		while(this->obj_pool.size() > 0) {
 			obj_record obj = this->obj_pool.back();
@@ -246,6 +252,142 @@ public:
 
 class SimpleGCObjectPacker: public SimpleObjectPacker {
 public:
+
+	/*
+	 * Can't generate a gc stripe on-demand.
+	 */
+	void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack, int simulation_time)
+	{
+		return;
+	}
+
+	/*
+	 * Repacks objects from given extent
+	 */
+	void gc_extent(Extent * ext, shared_ptr<AbstractExtentStack> extent_stack,
+			object_lst objs=object_lst())
+	{
+		for (auto & obj : objs)
+			this->add_obj(obj.first, ext->get_obj_size(obj.first));
+		this->pack_objects(extent_stack, objs);
+	}
+
+	void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, object_lst objs=object_lst(),
+			int key=0)
+	{
+		while(this->obj_pool.size() > 0) {
+			obj_record obj = this->obj_pool.back();
+			this->obj_pool.pop_back();
+			this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second, key);
+		}
+	}
 };
 
 #endif // __OBJECT_PACKER_H_
+
+class MixedObjObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class MixedObjGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class AgeBasedObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class AgeBasedGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class SizeBasedObjectPackerBaseline:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class SizeBasedGCObjectPackerBaseline:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class SizeBasedObjectPackerSmallerObj:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class SizeBasedGCObjectPackerSmallerObj:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+class SizeBasedObjectPackerDynamicStrategy:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+class SizeBasedGCObjectPackerDynamicStrategy:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class SizeBasedObjectPackerSmallerWholeObjFillGap:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+class SizeBasedGCObjectPackerSmallerWholeObjFillGap:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class SizeBasedObjectPackerLargerWholeObj:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class SizeBasedGCObjectPackerLargerWholeObj:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class MortalImmortalObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class MortalImmortalGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class RandomizedObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class RandomizedGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class AgeBasedRandomizedObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class AgeBasedRandomizedGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};
+
+class GenerationBasedObjectPacker:public SimpleObjectPacker{
+    public:
+    using SimpleObjectPacker::SimpleObjectPacker;
+};
+
+class GenerationBasedGCObjectPacker:public SimpleGCObjectPacker{
+    public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+};

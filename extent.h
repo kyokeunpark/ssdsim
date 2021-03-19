@@ -1,7 +1,9 @@
 #pragma once
+#include <vector>
 #include <unordered_map>
 #include "extent_object.h"
-
+using obj_record = std::pair<Extent_Object*, int>;
+using object_lst = std::vector<obj_record>;
 using namespace std;
 class Extent {
     public:
@@ -112,16 +114,16 @@ class Extent {
             return obsolete_space / ext_size;
         }
 
-        unordered_map<Extent_Object*, double > delete_ext()
+        object_lst delete_ext()
         {
-            unordered_map<Extent_Object*, double > ret = unordered_map<Extent_Object*, double >();
+            object_lst ret;
             
             for (auto& it: *objects) {
                 double sum = 0;
                 for(Extent_Object_Shard* s: *it.second)
                 {
                     sum += s->shard_size;
-                    ret.emplace(it.first, sum);
+                    ret.push_back(make_pair(it.first, sum));
                 }
             }
             delete objects;
