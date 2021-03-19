@@ -34,6 +34,5 @@
 #vscode
 .vscode/
 
-build/*/
-build/*
+# Cmake build file
 build/
