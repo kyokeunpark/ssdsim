@@ -23,7 +23,6 @@ using ext_types_mgr = std::unordered_map<string, int>;
 class ObjectPacker {
 
 public:
-
 	/*
 	 * Method for adding items to the object pool. Each object packer can
 	 * decide on the best policy for adding the object into the pool.
@@ -134,7 +133,7 @@ public:
 	void update_extent_type(Extent * extent)
 	{
 		if (this->record_ext_types) {
-			string ext_type = this->get_extent_type(ext);
+			string ext_type = this->get_extent_type(extent);
 
 			if (this->ext_types.find(ext_type) != this->ext_types.end())
 				this->ext_types[ext_type] += 1;
@@ -146,7 +145,7 @@ public:
 	/*
 	 * The method generates num_exts at the extent list at the given key
 	 */
-	void generate_exts_at_key(ExtentStack & extent_stack, int num_exts, int key)
+	void generate_exts_at_key(shared_ptr<ExtentStack> extent_stack, int num_exts, int key)
 	{
 		int num_exts_at_key = extent_stack.get_length_at_key(key);
 		while (num_exts_at_key < num_exts) {

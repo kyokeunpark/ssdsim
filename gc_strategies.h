@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-class GarbageCollectionStrategy{
-    int num_gc_cycles;
-};
-=======
 #ifndef __GC_STRATEGIES_H_
 #define __GC_STRATEGIES_H_
 
@@ -52,4 +47,3 @@ public:
 };
 
 #endif // __GC_STRATEGIES_H_
->>>>>>> 7f6401ec5b7c9cc930845fb8eb9b5b5fe1528bc6

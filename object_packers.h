@@ -7,208 +7,118 @@
 #include <map>
 #include <list>
 #include <memory>
+class ObjectPacker
+{
+    public:
+        virtual void add_obj() = 0;
+        virtual void pack_objects() = 0;
+};
 
-using current_extents = std::unordered_map<int, Extent*>;
-using ext_types_mgr = std::unordered_map<string, int>;
+class GenericObjectPacker
+{
+    public:
+        shared_ptr<ObjectManager>object_manager;
+        shared_ptr<ExtentManager>extent_manager;
+        int num_objs_in_pool;
+        map<string, int>ext_types;
+        int threshold;
+        shared_ptr<unordered_map<Extent_Object*, double > > object_pool;
+        shared_ptr<map<int, Extent *>> current_extents;
+        bool record_ext_types;
+        GenericObjectPacker(shared_ptr<ObjectManager>o_m, shared_ptr<ExtentManager>e_m, int num_o = 100, int threshold = 10,bool record_ext_t = false,
+            shared_ptr<unordered_map<Extent_Object*, double >> obj_p = make_shared<unordered_map<Extent_Object*, double > >(), 
+            shared_ptr<map<int, Extent *>> crt_exts = make_shared<map<int, Extent *>>()
+            ): object_manager(o_m), extent_manager(e_m),
+                 num_objs_in_pool(num_o),object_pool(obj_p),current_extents(crt_exts),
+                 record_ext_types(record_ext_t)
+        {
+            srand(0);
+        }
+        void add_obj(Extent* obj, int size)
+        {
 
-/*
- * Interface for ObjectPackers to follow
- */
-class ObjectPacker {
+        }
+        void add_objs(unordered_map<Extent_Object*, double >  objlst)
+        {
+            object_pool->insert(objlst.begin(), objlst.end());
+        }
+        virtual void pack_objects(ExtentStack<class V, class K> extent_stack, int key = 0) = 0;
 
-public:
+        template<class V, class K>
+        void generate_exts_at_key(ExtentStack<V,K> * extent_stack, int num_exts, int key)
+        {
+            int num_exts_at_key = extent_stack->get_length_at_key(key);
+            while (num_exts_at_key < num_exts)
+            {
+                auto objs = object_manager->create_new_object();
+                unordered_map<Extent_Object*, double > objlst;
+                for(auto o : objs)
+                {
+                    objlst.emplace(o, o->size);
+                }
+                add_objs(objlst);
+                pack_objects(extent_stack);
+                num_exts_at_key = extent_stack->get_length_at_key(key);
+            }
+        } 
 
-	/*
-	 * Method for adding items to the object pool. Each object packer can
-	 * decide on the best policy for adding the object into the pool.
-	 */
-	virtual void add_obj(Extent_Object * object, int obj_size) = 0;
-
-	/*
-	 * Method for packing objects into extents. Each packer decides on the
-	 * policy of how to pack objects into extents.
-	 */
-	virtual void pack_objects() = 0;
+        template<class V, class K, class sim_T>
+        void generate_stripes(ExtentStack<V,K> * extent_stack, sim_T simulation_time)
+        {
+            if (object_pool->size() < num_objs_in_pool)
+            {
+                auto objs = object_manager->create_new_object(num_objs_in_pool - object_pool->size());
+                unordered_map<Extent_Object*, double > objlst;
+                for(auto o : objs)
+                {
+                    objlst.emplace(o, o->size);
+                }
+                add_objs(objlst);
+            }
+            pack_objects(extent_stack);
+        }
 
 };
 
-class GenericObjectPacker: public ObjectPacker {
+class SimpleObjectPacker : public GenericObjectPacker
+{
+    public:
+    using GenericObjectPacker::GenericObjectPacker;
+    void pack_objects(ExtentStack<class V, class K> extent_stack, int key = 0){}
+};
 
-protected:
-	ObjectManager obj_manager;
-	ExtentManager ext_manager;
-	object_lst obj_pool;
-	current_extents current_exts;
-	ext_types_mgr ext_types;
-	short threshold, num_objs_in_pool;
-	bool record_ext_types;
+class SimpleGCObjectPacker : public SimpleObjectPacker
+{
+    public:
+        using SimpleObjectPacker::SimpleObjectPacker;
+        template<class V, class K>
+        void gc_extent(shared_ptr<Extent> ext, shared_ptr<ExtentStack<V, K>> extent_stack, list<Extent_Object *> objs)
+        {}
 
-public:
+        void generate_extents()
+        {
+            if (object_pool->size() < num_objs_in_pool)
+            {
+                auto objs = object_manager->create_new_object(num_objs_in_pool - object_pool->size());
+                unordered_map<Extent_Object*, double > objlst;
+                for(auto o : objs)
+                {
+                    objlst.emplace(o, o->size);
+                }
+                add_objs(objlst);
+            }    
+        }
+        void generate_objs(int space)
+        {
+            while (space > 0){
+                auto objs = object_manager->create_new_object();
+                space -= objs[0]->size;
+                unordered_map<Extent_Object*, double > objlst;
+                objlst.emplace(objs[0], objs[0]->size);
+                add_objs(objlst);
+            }
+        }
 
-	GenericObjectPacker(ObjectManager & obj_manager, ExtentManager & ext_manager,
-			object_lst obj_pool = object_lst(), current_extents current_exts = current_extents(),
-			short num_objs_in_pool = 100, short threshold = 10, bool record_ext_types = false)
-		: obj_manager(obj_manager), ext_manager(ext_manager), obj_pool(obj_pool),
-		current_exts(current_exts), num_objs_in_pool(num_objs_in_pool),
-		threshold(threshold), record_ext_types(record_ext_types)
-		{
-			this->ext_types = ext_types_mgr();
-		}
-
-	/*
-	 * Add the object to the object pool. Need to specify the size since when
-	 * deleting from an extent only part of the object should be put back
-	 * in the pool and repacked.
-	 */
-	void add_obj(Extent_Object * object, int obj_size)
-	{
-		this->obj_pool.emplace_back(std::make_pair(object, obj_size));
-	}
-
-	/*
-	 * Add the objects in obj_lst to the object pool.
-	 */
-	void add_objs(object_lst obj_lst)
-	{
-		this->obj_pool.insert(this->obj_pool.end(), obj_lst.begin(), obj_lst.end());
-	}
-
-	/*
-	 * Returns true if extent is in current extents dict and false otherwise
-	 */
-	bool is_ext_in_current_extents(Extent * extent)
-	{
-		for (auto & ext : this->current_exts)
-			if (ext.second == extent)
-				return true;
-		return false;
-	}
-
-	void remove_extent_from_current_extents(Extent * extent)
-	{
-		for (auto & ext : this->current_exts){
-			if (ext.second == extent) {
-				this->current_exts.erase(ext.first);
-				return;
-			}
-		}
-	}
-
-	/*
-	 * Returns the extent type based on its largest object. Right now large
-	 * extents have objects that occupy the whole extent (i.e., object is
-	 * larger than one extent). Small obj extents that have objects that are
-	 * smaller than the gc_threshold. The rest are defined by the percentage
-	 * occupancy of the extent by the largest object.
-	 */
-	string get_extent_type(Extent * extent)
-	{
-		// Find the largest object stored in the extent
-		int largest_obj = INT32_MIN, local_max = 0, num_objs = 0;
-		for (auto & tuple : extent->obj_ids_to_obj_size) {
-			std::vector<int> sizes = tuple.second;
-			local_max = std::accumulate(sizes.begin(), sizes.end(), 0);
-			if (largest_obj < local_max) {
-				largest_obj = local_max;
-				num_objs = sizes.size();
-			}
-		}
-		if (largest_obj >= this->threshold / 100.0 * extent->ext_size
-				&& largest_obj < extent->ext_size) {
-			double frac = largest_obj / extent->ext_size;
-			return std::to_string(floor(frac) * 10) + "-"
-				+ std::to_string(ceil(frac) * 10);
-		} else if (largest_obj < this->threshold / 100.0 * extent->ext_size) {
-			return "small";
-		} else {
-			return "large";
-		}
-	}
-
-	void update_extent_type(Extent * extent)
-	{
-		if (this->record_ext_types) {
-			string ext_type = this->get_extent_type(ext);
-
-			if (this->ext_types.find(ext_type) != this->ext_types.end())
-				this->ext_types[ext_type] += 1;
-			else
-				this->ext_types[ext_type] = 1;
-		}
-	}
-
-	/*
-	 * The method generates num_exts at the extent list at the given key
-	 */
-	void generate_exts_at_key(ExtentStack & extent_stack, int num_exts, int key)
-	{
-		int num_exts_at_key = extent_stack.get_length_at_key(key);
-		while (num_exts_at_key < num_exts) {
-			object_lst objs = this->obj_manager.create_new_object();
-			this->add_objs(objs);
-			this->pack_objects(extent_stack);
-			num_exts_at_key = extent_stack.get_length_at_key(key);
-		}
-	}
-
-	/*
-	 * This method will ensure that the extnet stack has enough extents to
-	 * create the required number of stripes. Each subclass has to
-	 * determine how to divide the extent stack into stripes (i.e., can extents
-	 * belonging to one key mix with extents from another)
-	 */
-	void generate_stripes(ExtentStack & extent_stack, int simulation_time)
-	{
-		if (this->obj_pool.size() < this->num_objs_in_pool) {
-			object_lst objs = this->obj_manager.create_new_object(this->num_objs_in_pool - this->obj_pool.size());
-			this->add_objs(objs);
-		}
-		this->pack_objects(extent_stack)
-	}
-
-	/*
-	 * Creates objects to fill the provided amount of space.
-	 */
-	void generate_objs(int space)
-	{
-		while (space > 0) {
-			object_lst objs = this->obj_manager.create_new_object(1);
-			space -= objs[0].second;
-			this->add_objs(objs);
-		}
-	}
-
-	void add_obj_to_current_ext_at_key(ExtentStack & extent_stack,
-			Extent_Object * obj, int obj_rem_size, int key)
-	{
-		int temp = 0;
-		if (this->current_exts.find(key) == this->current_exts.end())
-			this->current_exts[key] = this->ext_manager.create_extent();
-		Extent * current_ext = this->current_exts[key];
-
-		while (obj_rem_size > 0) {
-			temp = current_ext->add_object(obj, obj_rem_size);
-			obj_rem_size -= temp;
-
-			// Seal the extent if the extent is full
-			if (obj_rem_size > 0 || (obj_rem_size == 0 && current_ext->free_space == 0)) {
-				this->update_extent_type(current_ext);
-				current_ext->type = this->get_extent_type(current_ext);
-
-				extent_stack.add_extent(this->current_exts[key], key);
-				current_ext = this->ext_manager.create_extent();
-				this->current_exts[key] = current_ext;
-			}
-		}
-	}
-
-	/*
-	 * Method that retrieves all objects from object pool. Identifies the
-	 * corresponding key for each object in current_extents and calls
-	 * add_obj_to_current_ext_at_key.
-	 */
-	virtual void pack_objects(ExtentStack & extent_stack) = 0;
-	// TODO: extent_stack might need to be a pointer here
 };
 
 class MixedObjObjectPacker:public SimpleObjectPacker{

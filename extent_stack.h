@@ -1,8 +1,4 @@
 #pragma once
-<<<<<<< HEAD
-=======
-
->>>>>>> 7f6401ec5b7c9cc930845fb8eb9b5b5fe1528bc6
 #include "stripe_manager.h"
 #include <map>
 #include <list>

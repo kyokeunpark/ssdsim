@@ -1,6 +1,6 @@
 #ifndef __CONFIGS_H_
 #define __CONFIGS_H_
-#include "object_packers.h"
+#include "object_packer.h"
 #include "data_center.h"
 #include "stripers.h"
 #include "extent_manager.h"
