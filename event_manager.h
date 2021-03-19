@@ -1,3 +1,4 @@
+#pragma once
 #include <queue>
 #include <list>
 #include "extent_object.h"
@@ -23,8 +24,8 @@ class EventManager{
                 events->emplace(e);
             }
         }
-        void empty(){
-            events->empty();
+        bool empty(){
+            return events->empty();
         }
 
 };

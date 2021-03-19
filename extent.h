@@ -1,18 +1,38 @@
 #pragma once
+#include <vector>
 #include <unordered_map>
 #include "extent_object.h"
+using obj_record = std::pair<Extent_Object*, int>;
+using object_lst = std::vector<obj_record>;
 using namespace std;
 class Extent {
     public:
         double obsolete_space;
         double free_space;
         double ext_size;
+
         unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > * objects;
+        unordered_map<int, vector<int>> obj_ids_to_obj_size;
         int locality;
         int generation;
         time_t timestamp;
         string type;
         int secondary_threshold;
+
+        int get_default_key()
+        {
+            return 0;
+        }
+        
+        time_t get_timestamp()
+        {
+            return timestamp;
+        }
+
+        int get_generation()
+        {
+            return generation;
+        }
 
         Extent(int e_s, int s_t)
         :obsolete_space(0),free_space(e_s), ext_size(e_s),
@@ -49,25 +69,26 @@ class Extent {
         int add_object(Extent_Object* obj, int size, int generation = 0)
         {
             int temp_size = size < free_space?size:free_space;
+            int obj_id = obj->id;
             if(!timestamp)
-            {
                 timestamp = obj->creation_time;
-            }else if(obj->creation_time < timestamp)
-            {
+            else if(obj->creation_time < timestamp)
                 timestamp = obj->creation_time;
-            }
 
             if(!generation)
-            {
                 this->generation = obj->generation;
-            }else if(generation > this->generation)
-            {
+            else if(generation > this->generation)
                 this->generation = obj->generation;
+
+            if (this->obj_ids_to_obj_size.find(obj_id) != this->obj_ids_to_obj_size.end()) {
+                this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
+            } else {
+                this->obj_ids_to_obj_size[obj_id] = { temp_size };
+                Extent_Object_Shard* new_shard = new Extent_Object_Shard(size);
+                obj->shards->push_back(new_shard);
+                this->objects->emplace(std::make_pair(obj, new list<Extent_Object_Shard*>()));
+                this->objects->find(obj)->second->push_back(new_shard);
             }
-            Extent_Object_Shard* new_shard = new Extent_Object_Shard(size);
-            obj->shards->push_back(new_shard);
-            objects->emplace(std::make_pair(obj, new list<Extent_Object_Shard*>()));
-            objects->find(obj)->second->push_back(new_shard);
             free_space -= temp_size;
             return temp_size;
         }
@@ -93,16 +114,16 @@ class Extent {
             return obsolete_space / ext_size;
         }
 
-        unordered_map<Extent_Object*, double > delete_ext()
+        object_lst delete_ext()
         {
-            unordered_map<Extent_Object*, double > ret = unordered_map<Extent_Object*, double >();
+            object_lst ret;
             
             for (auto& it: *objects) {
                 double sum = 0;
                 for(Extent_Object_Shard* s: *it.second)
                 {
                     sum += s->shard_size;
-                    ret.emplace(it.first, sum);
+                    ret.push_back(make_pair(it.first, sum));
                 }
             }
             delete objects;

@@ -1,25 +1,29 @@
+#pragma once
 #include "stripe.h"
 #include "event_manager.h"
 #include "samplers.h"
 #include "config.h"
 #include <random>
 
+using obj_record = std::pair<Extent_Object*, int>;
+using object_lst = std::vector<obj_record>;
+
 class ObjectManager{
     public:
         list<Extent_Object*>* objects;
-        EventManager * event_manager;
-        Sampler * sampler;
+        shared_ptr<EventManager> event_manager;
+        shared_ptr<Sampler> sampler;
         bool add_noise;
         
-        ObjectManager(EventManager * e_m, Sampler * s, bool a_n = true):
+        ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s, bool a_n = true):
         objects(new list<Extent_Object*>()), event_manager(e_m), sampler(s), add_noise(a_n){
             //np.random.seed(0)
             srand(0);
         }
 
         //docstring and code doesnt match managers.py
-        vector <Extent_Object *> create_new_object(int num_samples = 1){
-            vector <Extent_Object *> new_objs = vector<Extent_Object *>();
+        object_lst create_new_object(int num_samples = 1){
+            object_lst new_objs = object_lst();
             auto size_age_samples = sampler->get_size_age_sample();
             sizes size_samples = size_age_samples.first;
             lives life_samples = size_age_samples.second;
@@ -35,7 +39,8 @@ class ObjectManager{
                 }
                 life += TIME;
                 Extent_Object * obj = new Extent_Object(size, life);
-                new_objs.push_back(obj);
+                new_objs.emplace_back(std::make_pair(obj, size));
+                this->objects->push_back(obj);
                 event_manager->put_event(life, obj);
             }
             return new_objs;

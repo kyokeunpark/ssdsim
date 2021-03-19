@@ -8,12 +8,12 @@ class StripeManager{
     public:
         list<Stripe *>* stripes;
         int num_data_exts_per_locality;
-        int num_local_parities;
-        int num_global_parities;
+        float num_local_parities;
+        float num_global_parities;
         int num_localities_in_stripe;
         int num_exts_per_stripe;
         int num_data_exts_per_stripe;
-        double coding_overhead;
+        float coding_overhead;
 
         StripeManager(int num_data_extents, int num_local_parities, int num_global_parities,
          int num_localities_in_stripe, int coding_overhead = 0)
