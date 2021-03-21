@@ -20,16 +20,9 @@
 using current_extents = std::unordered_map<int, Extent *>;
 using ext_types_mgr = std::unordered_map<string, int>;
 
-// bool operator<(const int v, obj_record &record) { return v < record.second; }
+bool operator<(const int v, obj_record &record) { return v < record.second; }
 
-// bool operator<(obj_record &record, const int v) { return record.second < v; }
-
-inline bool obj_record_comparator_upper(const int a, obj_record b) {
-    return a < b.second;
-}
-inline bool obj_record_comparator_lower(obj_record a, const int b) {
-    return a.second < b;
-}
+bool operator<(obj_record &record, const int v) { return record.second < v; }
 
 /*
  * Interface for ObjectPackers to follow
@@ -678,9 +671,8 @@ class SizeBasedObjectPacker : public virtual SimpleObjectPacker {
             // TODO: Need to make sure that the upper_bound and lower_bound
             // 		 calls returns same indices as Python's bisect_left and
             //		 bisect_right function call
-            auto obj_it =
-                std::upper_bound(this->obj_pool.begin(), this->obj_pool.end(),
-                                 free_space, obj_record_comparator_upper);
+            auto obj_it = std::upper_bound(this->obj_pool.begin(),
+                                           this->obj_pool.end(), free_space);
             ind = obj_it - this->obj_pool.begin() - 1;
             this->adjust_index(ind, obj_it->second);
         }
@@ -692,9 +684,8 @@ class SizeBasedObjectPacker : public virtual SimpleObjectPacker {
         if (ext_size == free_space) {
             ind = -1;
         } else {
-            auto obj_it =
-                std::lower_bound(this->obj_pool.begin(), this->obj_pool.end(),
-                                 free_space, obj_record_comparator_lower);
+            auto obj_it = std::lower_bound(this->obj_pool.begin(),
+                                           this->obj_pool.end(), free_space);
             ind = obj_it - this->obj_pool.begin() - 1;
             this->adjust_index(ind, obj_it->second);
         }
