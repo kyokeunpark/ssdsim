@@ -7,9 +7,10 @@
 #include "stripe_manager.h"
 #include "stripers.h"
 #include <memory>
-template <class extent_stack_value_type, class extent_stack_key_type, class sim_T>
+
 class StripingProcessCoordinator{
-    public:
+
+    protected:
         shared_ptr<SimpleObjectPacker> object_packer;
         shared_ptr<SimpleGCObjectPacker> gc_object_packer;
         shared_ptr<AbstractStriperDecorator> striper;
@@ -17,13 +18,16 @@ class StripingProcessCoordinator{
         shared_ptr<AbstractExtentStack> extent_stack;
         shared_ptr<AbstractExtentStack> gc_extent_stack;
         shared_ptr<StripeManager> stripe_manager;
-        sim_T simulation_time;
+        int simulation_time;
+
+    public:
+
         StripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
             shared_ptr<SimpleGCObjectPacker> gc_o_p,
             shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
             shared_ptr<AbstractExtentStack> e_s, 
-            shared_ptr<AbstractExtentStack>gc_e_s,  
-            shared_ptr<StripeManager> s_m, sim_T s_t):
+            shared_ptr<AbstractExtentStack> gc_e_s,  
+            shared_ptr<StripeManager> s_m, int s_t):
             object_packer(o_p), gc_object_packer(gc_o_p), striper(s),
             gc_striper(gc_s), extent_stack(e_s), gc_extent_stack(gc_e_s), 
             stripe_manager(s_m), simulation_time(s_t)
@@ -37,7 +41,7 @@ class StripingProcessCoordinator{
 
         }
 
-        Extent * get_gc_extent(int key = 0)
+        virtual Extent * get_gc_extent(int key = 0)
         {
             if (gc_extent_stack->get_length_at_key(key) > 0){
                 return gc_extent_stack->get_extent_at_key(key);
@@ -45,7 +49,7 @@ class StripingProcessCoordinator{
             return nullptr;
         }
 
-        Extent * get_extent(int key=0)
+        virtual Extent * get_extent(int key=0)
         {
             if (extent_stack->get_length_at_key(key) > 0)
             {
@@ -58,7 +62,7 @@ class StripingProcessCoordinator{
             }
         }
 
-        Stripe * get_stripe(int key = 0)
+        virtual str_costs get_stripe(int key = 0)
         {
             int num_exts_per_stripe = stripe_manager->num_data_exts_per_stripe;
             int num_exts_at_key = extent_stack->get_length_at_key(key);
@@ -71,7 +75,7 @@ class StripingProcessCoordinator{
                 return striper->create_stripe(extent_stack, simulation_time);
             }
         }
-        array<int, 3> stripe_generator(shared_ptr<AbstractStriperDecorator> striper, 
+        str_costs stripe_generator(shared_ptr<AbstractStriperDecorator> striper, 
             shared_ptr<SimpleObjectPacker> objecct_packer,
             shared_ptr<AbstractExtentStack> extent_stack)
         {
@@ -110,11 +114,11 @@ class StripingProcessCoordinator{
             return types;
         }
 
-        array<int, 3> generate_stripes()
+        str_costs generate_stripes()
         {
             return stripe_generator(striper, object_packer, extent_stack);
         }
-        array<int, 3> generate_gc_stripes()
+        str_costs generate_gc_stripes()
         {
             return stripe_generator(gc_striper, gc_object_packer, gc_extent_stack);
         }
@@ -164,23 +168,25 @@ class StripingProcessCoordinator{
 
 };
 
-template <class extent_stack_value_type, class extent_stack_key_type, class sim_T>
 class BestEffortStripingProcessCoordinator
-    :public StripingProcessCoordinator<extent_stack_value_type, extent_stack_key_type, sim_T>
+    :public StripingProcessCoordinator
 {
-    public:
-        extent_stack_key_type (*default_key)();
-        BestEffortStripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
-            shared_ptr<SimpleGCObjectPacker> gc_o_p,
-            shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
-            shared_ptr<AbstractExtentStack> e_s, 
-            shared_ptr<AbstractExtentStack>gc_e_s,  
-            shared_ptr<StripeManager> s_m, sim_T s_t,extent_stack_key_type (*key)() )
-            :StripingProcessCoordinator<extent_stack_value_type, extent_stack_key_type, sim_T>
-                (o_p, gc_o_p,s,gc_s,e_s,gc_e_s,s_m, s_t), default_key(key)
-        {}
+    int default_key;
+    shared_ptr<BestEffortExtentStack> extent_stack, gc_extent_stack;
 
-    Extent * get_extent(extent_stack_key_type key)
+public:
+
+    BestEffortStripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
+        shared_ptr<SimpleGCObjectPacker> gc_o_p,
+        shared_ptr<AbstractStriperDecorator>s, shared_ptr<AbstractStriperDecorator>gc_s,
+        shared_ptr<BestEffortExtentStack> e_s, 
+        shared_ptr<BestEffortExtentStack> gc_e_s,  
+        shared_ptr<StripeManager> s_m, int s_t, int key)
+        : StripingProcessCoordinator (o_p, gc_o_p,s,gc_s,e_s,gc_e_s,s_m, s_t),
+          extent_stack(e_s), gc_extent_stack(gc_e_s), default_key(key)
+    {}
+
+    Extent * get_extent(int key) override
     {
         if (this->extent_stack->get_length_at_key(key) > 0)
         {
@@ -190,31 +196,31 @@ class BestEffortStripingProcessCoordinator
             {
                 return this->extent_stack->get_extent_at_closest_key(key);
             }else {
-                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key());
+                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key);
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
                 
         }
     }
-    Extent * get_gc_extent(extent_stack_key_type key)
+    Extent * get_gc_extent(int key) override
     {
         if (this->gc_extent_stack->get_length_at_key(key) > 0)
         {
-            return this->gc_extent_stack.get_extent_at_key(key);
+            return this->gc_extent_stack->get_extent_at_key(key);
         }else {
             if (this->gc_extent_stack->get_length_of_extent_stack())
             {
                 return this->gc_extent_stack->get_extent_at_closest_key(key);
             }else
             {
-                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key());
+                this->object_packer->generate_exts_at_key(this->extent_stack, 1, default_key);
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
                 
         }
             
     }
-    Stripe * get_stripe(extent_stack_key_type key=0)
+    str_costs get_stripe(int key=0) override
     {
         int num_exts_per_stripe = this->stripe_manager->num_data_exts_per_stripe;
         int num_exts = this->extent_stack->get_length_of_extent_stack();
@@ -224,7 +230,7 @@ class BestEffortStripingProcessCoordinator
         }
         else
         {
-            this->object_packer->generate_exts_at_key(this->extent_stack, num_exts_per_stripe, default_key());
+            this->object_packer->generate_exts_at_key(this->extent_stack, num_exts_per_stripe, default_key);
             return this->striper->create_stripe(this->extent_stack, this->simulation_time);
         }
     }

@@ -62,7 +62,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_no_exts_config(const unsigne
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -101,7 +101,7 @@ DataCenter<Extent *, int, sim_T>  no_exts_mix_objs_config(const unsigned long da
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold,false, obj_pool, current_exts);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
-	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /* TODO 
 	gc_strategy =MixObjStripeLevelStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper)
 	*/
@@ -136,7 +136,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_confi
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold,false);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
-	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /*TODO
 	gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper)
 	*/
@@ -171,7 +171,7 @@ DataCenter<Extent *, int, sim_T>  stripe_level_with_extents_separate_pools_effic
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
-	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /*TODO
 	gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper)
 	*/
@@ -214,7 +214,7 @@ DataCenter<Extent *, int, sim_T>  age_based_config_no_exts(const unsigned long d
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = BestEffortStripingProcessCoordinator<Extent *, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<BestEffortStripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -257,7 +257,7 @@ DataCenter<Extent *, int, sim_T>  age_based_config(const unsigned long data_cent
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_time<int>);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<BestEffortStripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_time<int>);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -294,7 +294,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_baseline_confi
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerBaseline>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int,sim_T>> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -332,7 +332,7 @@ DataCenter<Extent *, int, sim_T>  size_based_stripe_level_no_exts_smaller_obj_co
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerSmallerObj>(obj_mngr, ext_mngr, num_objs, primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = StripingProcessCoordinator<Extent *, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
 	gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -370,7 +370,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_dy
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerDynamicStrategy>(obj_mngr, ext_mngr, num_objs, primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
     shared_ptr<AbstractExtentStack> gc_extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
- 	StripingProcessCoordinator<extent_stack_ext_lst, int, sim_T> coordinator = StripingProcessCoordinator<extent_stack_ext_lst, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	StripingProcessCoordinator coordinator = StripingProcessCoordinator(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper, StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper))
 	*/
@@ -408,7 +408,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T> size_based_whole_obj_config(const u
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerSmallerWholeObjFillGap>(obj_mngr, ext_mngr, num_objs, primary_threshold,true);
     shared_ptr<AbstractExtentStack> extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
     shared_ptr<AbstractExtentStack> gc_extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
-	StripingProcessCoordinator<extent_stack_ext_lst, int, sim_T> coordinator = StripingProcessCoordinator<extent_stack_ext_lst, int, sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	StripingProcessCoordinator coordinator = StripingProcessCoordinator(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /*TODO
     gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper, StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper))
 	*/
@@ -445,7 +445,7 @@ DataCenter<extent_stack_ext_lst, int, sim_T>  size_based_stripe_level_no_exts_la
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<SizeBasedGCObjectPackerLargerWholeObj>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
     shared_ptr<AbstractExtentStack> gc_extent_stack = static_pointer_cast<AbstractExtentStack>(make_shared<WholeObjectExtentStack>(stripe_mngr));
- 	StripingProcessCoordinator<extent_stack_ext_lst, int, sim_T> coordinator = StripingProcessCoordinator<extent_stack_ext_lst, int,sim_T> (obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	StripingProcessCoordinator coordinator = StripingProcessCoordinator(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper, StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper))
 	*/
@@ -499,7 +499,7 @@ DataCenter<Extent *, int, sim_T>  mortal_immortal_no_exts_config(const unsigned 
     
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -539,7 +539,7 @@ DataCenter<Extent *, int, sim_T>  randomized_ext_placement_joined_pools_config(c
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs, obj_pool, current_exts);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<ExtentStackRandomizer>(make_shared<SingleExtentStack>(stripe_mngr));
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
-	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /* TODO 
     gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper)
 	*/
@@ -575,7 +575,7 @@ DataCenter<Extent *, int, sim_T>  randomized_obj_placement_joined_pools_config(c
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
-	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
     /* TODO 
     gc_strategy = StripeLevelWithExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper, StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, gc_striper))
 	*/
@@ -614,7 +614,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_config(const unsigned 
     
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -657,7 +657,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_mix_objs_config(const 
     
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<StripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<StripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -697,7 +697,7 @@ DataCenter<Extent *, int, sim_T>  age_based_rand_config_no_exts(const unsigned l
     
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<BestEffortStripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/
@@ -744,7 +744,7 @@ DataCenter<Extent *, int, sim_T>  generational_config(const unsigned long data_c
     current_exts->emplace(0, ext_mngr->create_extent());
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);
- 	shared_ptr<StripingProcessCoordinator<Extent *, int, sim_T>> coordinator = make_shared<BestEffortStripingProcessCoordinator<Extent *, int, sim_T>>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
+ 	shared_ptr<StripingProcessCoordinator> coordinator = make_shared<BestEffortStripingProcessCoordinator>(obj_packer, gc_obj_packer, striper, gc_striper,extent_stack, gc_extent_stack, stripe_mngr, simul_time, get_timestamp<int>);
 	/*TODO
     gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold, secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 	*/

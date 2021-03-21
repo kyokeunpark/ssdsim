@@ -19,6 +19,16 @@
 using current_extents = std::unordered_map<int, Extent*>;
 using ext_types_mgr = std::unordered_map<string, int>;
 
+bool operator<(const int v, obj_record & record)
+{
+	return v < record.second;
+}
+
+bool operator<(obj_record & record, const int v)
+{
+	return record.second < v;
+}
+
 /*
  * Interface for ObjectPackers to follow
  */
@@ -254,7 +264,7 @@ public:
 
 };
 
-class SimpleGCObjectPacker: public SimpleObjectPacker {
+class SimpleGCObjectPacker: public virtual SimpleObjectPacker {
 public:
 
 	SimpleGCObjectPacker(ObjectManager & obj_manager, ExtentManager & ext_manager,
@@ -636,7 +646,7 @@ public:
 
 };
 
-class SizeBasedObjectPacker:public SimpleObjectPacker{
+class SizeBasedObjectPacker:public virtual SimpleObjectPacker{
 
 public:
     using SimpleObjectPacker::SimpleObjectPacker;
@@ -692,6 +702,172 @@ public:
 	}
 };
 
+/*
+ * Keeps the objects together as much as possible. When selecting an object,
+ * select the object slightly smaller than the available space in the extent.
+ * If an object get split multiple extents, keep the object together
+ * in a stripe for cross-extent erasure coding.
+ */
+class SizeBasedObjectPackerSmallerWholeObj : public SizeBasedObjectPacker {
+
+public:
+    using SizeBasedObjectPacker::SizeBasedObjectPacker;
+
+	std::pair<int, Extent*> add_obj_to_current_ext(shared_ptr<WholeObjectExtentStack> extent_stack,
+			Extent_Object * obj, int obj_rem_size, int key)
+	{
+		auto current_ext = this->current_exts[key];
+		auto tmp = current_ext->add_object(obj, obj_rem_size);
+
+		obj_rem_size = obj_rem_size - tmp;
+		// seal the extent if the extent is full
+		if (obj_rem_size > 0 || (!obj_rem_size && !current_ext->free_space)) {
+			this->current_exts[key] = this->ext_manager.create_extent();
+			this->update_extent_type(current_ext);
+
+			current_ext->type = this->get_extent_type(current_ext);
+			return std::make_pair(obj_rem_size, current_ext);
+		}
+		return std::make_pair(obj_rem_size, nullptr);
+	}
+
+	stack_val add_obj_to_current_ext_at_key(shared_ptr<WholeObjectExtentStack> extent_stack,
+			Extent_Object * obj, int obj_rem_size, int key, ext_stack obj_ids_to_exts)
+	{
+		stack_val exts = stack_val();
+		if (this->current_exts.find(key) == this->current_exts.end())
+			this->current_exts[key] = this->ext_manager.create_extent();
+		auto current_ext = this->current_exts[key];
+
+		while (obj_rem_size >= current_ext->ext_size) {
+			auto rem_size_and_ext = this->add_obj_to_current_ext(extent_stack, obj, obj_rem_size, key);
+			current_ext = rem_size_and_ext.second;
+			if (current_ext)
+				exts.emplace_back(current_ext);
+		}
+
+		if (exts.size() > 0) {
+			int obj_id = obj->id;
+			if (obj_ids_to_exts.find(obj_id) == obj_ids_to_exts.end())
+				obj_ids_to_exts[obj_id].insert(obj_ids_to_exts[obj_id].end(), exts.begin(), exts.end());
+			else
+				obj_ids_to_exts[obj_id] = exts;
+		}
+		
+		auto rem_size_and_ext = this->add_obj_to_current_ext(extent_stack, obj, obj_rem_size, key);
+		current_ext = rem_size_and_ext.second;
+
+		if (current_ext) {
+			exts.emplace_back(current_ext);
+			int obj_id = current_ext->objects->begin()->first->id;
+			if (obj_ids_to_exts.find(obj_id) != obj_ids_to_exts.end())
+				obj_ids_to_exts[obj_id].insert(obj_ids_to_exts[obj_id].end(), exts.begin(), exts.end());
+			else
+				obj_ids_to_exts[obj_id] = exts;
+		}
+
+		if (obj_rem_size > 0)
+			this->insert_obj_back_into_pool(obj, obj_rem_size);
+		return exts;
+	}
+
+	void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, int key=0) override
+	{
+		auto abs_ext_stack = std::static_pointer_cast<WholeObjectExtentStack>(extent_stack);
+		stack_val exts = stack_val();
+		ext_stack obj_ids_to_exts = ext_stack();
+
+		// If there are any object in the current extent, place them
+		// back in the pool.
+		if (this->current_exts.find(key) != this->current_exts.end()) {
+			auto objs = this->current_exts[key]->delete_ext();
+			this->add_objs(objs);
+		}
+
+		// Lambda function used to sort the objects in the obj_pool.
+		// It will try to sort by the  their size. If they are equivalent,
+		// it will try to sort by the id.
+		// TODO: From my interpretation of the original code, this is the
+		// 		 intended method. But we should test this to ensure that
+		// 		 we are getting the same result.
+		auto obj_compare = [](obj_record o1, obj_record o2) {
+				if (o1.second == o2.second)
+					return *o1.first < *o2.first;
+				return o1.second < o2.second;
+			};			
+		std::sort(this->obj_pool.begin(), this->obj_pool.end(), obj_compare);
+
+		while (this->obj_pool.size() > 0) {
+			if (this->current_exts.find(key) == this->current_exts.end())
+				this->current_exts[key] = this->ext_manager.create_extent();
+
+			auto current_ext = this->current_exts[key];
+			int free_space = current_ext->free_space;
+			int ind = this->get_smaller_obj_index(current_ext->ext_size, free_space);
+
+			auto obj = this->obj_pool[ind];
+			this->obj_pool.erase(this->obj_pool.begin() + ind);
+
+			exts = this->add_obj_to_current_ext_at_key(abs_ext_stack, obj.first, obj.second, key, obj_ids_to_exts);
+		}
+
+		for (auto mapping : obj_ids_to_exts)
+			abs_ext_stack->add_extent(mapping.second);
+	}
+
+};
+
+class SizeBasedGCObjectPackerSmallerWholeObj: public SizeBasedObjectPackerSmallerWholeObj, public SimpleGCObjectPacker {
+
+public:
+    using SimpleGCObjectPacker::SimpleGCObjectPacker;
+
+	void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, object_lst objs=object_lst(), int key=0) override
+	{
+		auto abs_ext_stack = std::static_pointer_cast<WholeObjectExtentStack>(extent_stack);
+		stack_val exts = stack_val();
+		ext_stack obj_ids_to_exts = ext_stack();
+
+		// If there are any object in the current extent, place them
+		// back in the pool.
+		if (this->current_exts.find(key) != this->current_exts.end()) {
+			auto objs = this->current_exts[key]->delete_ext();
+			this->add_objs(objs);
+		}
+
+		// Lambda function used to sort the objects in the obj_pool.
+		// It will try to sort by the  their size. If they are equivalent,
+		// it will try to sort by the id.
+		// TODO: From my interpretation of the original code, this is the
+		// 		 intended method. But we should test this to ensure that
+		// 		 we are getting the same result.
+		auto obj_compare = [](obj_record o1, obj_record o2) {
+				if (o1.second == o2.second)
+					return *o1.first < *o2.first;
+				return o1.second < o2.second;
+			};			
+		std::sort(this->obj_pool.begin(), this->obj_pool.end(), obj_compare);
+
+		while (this->obj_pool.size() > 0) {
+			if (this->current_exts.find(key) == this->current_exts.end())
+				this->current_exts[key] = this->ext_manager.create_extent();
+
+			auto current_ext = this->current_exts[key];
+			int free_space = current_ext->free_space;
+			int ind = this->get_smaller_obj_index(current_ext->ext_size, free_space);
+
+			auto obj = this->obj_pool[ind];
+			this->obj_pool.erase(this->obj_pool.begin() + ind);
+
+			exts = this->add_obj_to_current_ext_at_key(abs_ext_stack, obj.first, obj.second, key, obj_ids_to_exts);
+		}
+
+		for (auto mapping : obj_ids_to_exts)
+			abs_ext_stack->add_extent(mapping.second);
+	}
+
+};
+
 class SizeBasedGCObjectPackerBaseline:public SimpleGCObjectPacker{
     public:
     using SimpleGCObjectPacker::SimpleGCObjectPacker;
@@ -703,16 +879,6 @@ class AgeBasedObjectPacker:public SimpleObjectPacker{
 };
 
 class AgeBasedGCObjectPacker:public SimpleGCObjectPacker{
-    public:
-    using SimpleGCObjectPacker::SimpleGCObjectPacker;
-};
-
-class SizeBasedObjectPackerSmallerObj:public SimpleObjectPacker{
-    public:
-    using SimpleObjectPacker::SimpleObjectPacker;
-};
-
-class SizeBasedGCObjectPackerSmallerObj:public SimpleGCObjectPacker{
     public:
     using SimpleGCObjectPacker::SimpleGCObjectPacker;
 };

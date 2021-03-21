@@ -1,12 +1,16 @@
 #pragma once
+
 #include "stripe.h"
 #include "event_manager.h"
 #include "samplers.h"
 #include "config.h"
+#include <memory>
 #include <random>
 
 using obj_record = std::pair<Extent_Object*, int>;
 using object_lst = std::vector<obj_record>;
+
+using std::shared_ptr;
 
 class ObjectManager{
     public:
