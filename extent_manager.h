@@ -38,4 +38,10 @@ class ExtentManager{
             }
             return ret;
         }
+        
+        void delete_extent(Extent * extent)
+        {
+            exts->remove(extent);
+        }
+
 };

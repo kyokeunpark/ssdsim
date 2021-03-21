@@ -5,6 +5,7 @@ using namespace std;
 using object_lst = std::vector<obj_record>;
 class Stripe{
     public:
+        int id;
         double obsolete;
         int num_data_blocks;
         int num_localities;
@@ -14,15 +15,15 @@ class Stripe{
         double timestamp;
         int stripe_size;
         int primary_threshold;
-        list<Extent*>* extents;
+        list<Extent*> extents;
         
-        Stripe(int num_data_extents_per_locality, 
+        Stripe(int id, int num_data_extents_per_locality, 
         int num_localities, int ext_size, int primary_threshold)
-        :obsolete(0),num_data_blocks(num_data_extents_per_locality),
+        :id(id), obsolete(0),num_data_blocks(num_data_extents_per_locality),
         num_localities(num_localities), 
         free_space(num_localities*num_data_extents_per_locality),
         localities(new vector<int>(num_localities, 0)), ext_size(ext_size), timestamp(0),
-        stripe_size(0), primary_threshold(primary_threshold),extents(new list<Extent*>())
+        stripe_size(0), primary_threshold(primary_threshold),extents(list<Extent*>())
         {
             for(int i = 0; i < num_data_blocks * num_localities; ++i)
             {
@@ -59,7 +60,7 @@ class Stripe{
         {
             if(free_space)
             {
-                extents->push_back(ext);
+                extents.push_back(ext);
                 free_space-=1;
                 int locality = 0;
                 while((*localities)[locality] == num_data_blocks)
@@ -82,8 +83,8 @@ class Stripe{
         {
             ext->remove_objects();
             (*localities)[ext->locality] -= 1;
-            obsolete -= ext->obsolete_space;
-            extents->remove(ext);
+            obsolete -= ext->obsolete;
+            extents.remove(ext);
             free_space += 1;
         }
 

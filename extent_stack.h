@@ -45,7 +45,7 @@ public:
     virtual Extent * get_extent_at_key(int key) = 0;
     virtual bool contains_extent(Extent * extent) = 0;
     virtual void remove_extent(Extent * extent) = 0;
-
+    virtual Extent * get_extent_at_closest_key(int key);
 };
 
 class ExtentStack : public AbstractExtentStack {
@@ -277,7 +277,7 @@ class ExtentStackRandomizer: public AbstractExtentStack
             }
             return extent_stack->pop_stripe_num_exts(stripe_size);
         }
-        Extent * get_extent_at_closest_key(int key) 
+        Extent * get_extent_at_closest_key(int key) override
         {
             for(auto& kv : extent_stack->get_extent_stack())
             {
