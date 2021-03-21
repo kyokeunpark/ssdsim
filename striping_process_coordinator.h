@@ -17,7 +17,7 @@ class StripingProcessCoordinator {
     shared_ptr<AbstractExtentStack> gc_extent_stack;
     shared_ptr<StripeManager> stripe_manager;
     float simulation_time;
-
+    StripingProcessCoordinator() = delete;
     StripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
                                shared_ptr<SimpleGCObjectPacker> gc_o_p,
                                shared_ptr<AbstractStriperDecorator> s,
@@ -112,11 +112,14 @@ class StripingProcessCoordinator {
     void generate_exts() { gc_object_packer->generate_exts(); }
 
     void generate_objs(int space) { gc_object_packer->generate_objs(space); };
+
+    void pack_exts(int num_exts, int key = 0) {
+        object_packer->generate_exts_at_key(extent_stack, num_exts, key);
+    }
 };
 
 class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
-    int default_key;
-    shared_ptr<BestEffortExtentStack> extent_stack, gc_extent_stack;
+    float (*default_key)();
 
   public:
     BestEffortStripingProcessCoordinator(
@@ -124,12 +127,12 @@ class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
         shared_ptr<SimpleGCObjectPacker> gc_o_p,
         shared_ptr<AbstractStriperDecorator> s,
         shared_ptr<AbstractStriperDecorator> gc_s,
-        shared_ptr<BestEffortExtentStack> e_s,
-        shared_ptr<BestEffortExtentStack> gc_e_s, shared_ptr<StripeManager> s_m,
-        int s_t, int key)
+        shared_ptr<AbstractExtentStack> e_s,
+        shared_ptr<AbstractExtentStack> gc_e_s, shared_ptr<StripeManager> s_m,
+        int s_t, float (*key)())
         : StripingProcessCoordinator(o_p, gc_o_p, s, gc_s, e_s, gc_e_s, s_m,
                                      s_t),
-          extent_stack(e_s), gc_extent_stack(gc_e_s), default_key(key) {}
+          default_key(key) {}
 
     Extent *get_extent(int key) override {
         if (this->extent_stack->get_length_at_key(key) > 0) {
@@ -139,7 +142,7 @@ class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
                 return this->extent_stack->get_extent_at_closest_key(key);
             } else {
                 this->object_packer->generate_exts_at_key(this->extent_stack, 1,
-                                                          default_key);
+                                                          default_key());
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
         }
@@ -152,7 +155,7 @@ class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
                 return this->gc_extent_stack->get_extent_at_closest_key(key);
             } else {
                 this->object_packer->generate_exts_at_key(this->extent_stack, 1,
-                                                          default_key);
+                                                          default_key());
                 return this->extent_stack->get_extent_at_closest_key(key);
             }
         }
@@ -166,7 +169,7 @@ class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
                                                 this->simulation_time);
         } else {
             this->object_packer->generate_exts_at_key(
-                this->extent_stack, num_exts_per_stripe, default_key);
+                this->extent_stack, num_exts_per_stripe, default_key());
             return this->striper->create_stripe(this->extent_stack,
                                                 this->simulation_time);
         }

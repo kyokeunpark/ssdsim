@@ -237,10 +237,12 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
         gc_ext_res(short r, short w) : user_reads(r), user_writes(w) {}
     };
     gc_ext_res gc_ext(Extent *ext, Stripe *stripe) {
-        int key = extent_manager->get_key(ext);
-        Extent *temp_ext = striping_process_coordinator->get_gc_extent(key);
+        any key = extent_manager->get_key(ext);
+        Extent *temp_ext =
+            striping_process_coordinator->get_gc_extent(any_cast<int>(key));
         if (temp_ext == nullptr) {
-            temp_ext = striping_process_coordinator->get_extent(key);
+            temp_ext =
+                striping_process_coordinator->get_extent(any_cast<int>(key));
         }
 
         stripe->add_extent(temp_ext);
@@ -478,17 +480,16 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             for (Stripe *d : deleted) {
                 stripe_set.erase(d);
             }
-            striping_process_coordinator->generate();
+            striping_process_coordinator->generate_exts();
             striping_process_coordinator->generate_objs(ret.reclaimed_space);
             striping_process_coordinator->pack_exts(
                 ret.total_num_exts_replaced);
             for (int i = 0; i < ret.total_num_exts_replaced; ++i) {
             }
-            array<int, 3> stripe_res =
-                striping_process_coordinator->get_stripe();
-            int num_stripes = stripe_res[0];
-            int user_reads = stripe_res[1];
-            int user_writes = stripe_res[2];
+            str_costs stripe_res = striping_process_coordinator->get_stripe();
+            int num_stripes = stripe_res.stripes;
+            int user_reads = stripe_res.reads;
+            int user_writes = stripe_res.writes;
             int parity_writes = user_writes - user_reads;
             ret.total_global_parity_writes += parity_writes / 2;
             ret.total_local_parity_writes += parity_writes / 2;

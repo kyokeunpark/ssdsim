@@ -1,6 +1,7 @@
 #ifndef __CONFIGS_H_
 #define __CONFIGS_H_
 #include "data_center.h"
+#include "extent.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
 #include "object_manager.h"
@@ -13,11 +14,11 @@
 #include <memory>
 
 // typedef int sim_T;
-std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
-           shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
+inline std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
+                  shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
 create_managers(const int num_data_exts, const int num_local_parities,
                 const int num_global_parities, const int num_localities,
-                const SimpleSampler *sampler, const int ext_size,
+                const shared_ptr<SimpleSampler> sampler, const int ext_size,
                 any (Extent::*key_fnc)(), const float coding_overhead = 0,
                 const bool add_noise = false) {
     shared_ptr<StripeManager> stripe_mngr;
@@ -38,10 +39,10 @@ create_managers(const int num_data_exts, const int num_local_parities,
     return std::make_tuple(stripe_mngr, event_mngr, obj_mngr, ext_mngr);
 }
 
-DataCenter stripe_level_with_no_exts_config(
+inline DataCenter stripe_level_with_no_exts_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -71,9 +72,11 @@ DataCenter stripe_level_with_no_exts_config(
         make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
-        obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+        obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+        primary_threshold, true);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                          current_extents(), num_objs,
                                           primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
@@ -96,10 +99,10 @@ DataCenter stripe_level_with_no_exts_config(
     return data_center;
 }
 
-DataCenter no_exts_mix_objs_config(
+inline DataCenter no_exts_mix_objs_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -128,19 +131,17 @@ DataCenter no_exts_mix_objs_config(
     shared_ptr<AbstractStriperDecorator> gc_striper =
         make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-    shared_ptr<unordered_map<Extent_Object *, double>> obj_pool =
-        make_shared<unordered_map<Extent_Object *, double>>();
-    shared_ptr<map<int, Extent *>> current_exts =
-        make_shared<map<int, Extent *>>();
-    current_exts->emplace(0, ext_mngr->create_extent());
+    object_lst obj_pool = object_lst();
+    current_extents current_exts;
+    current_exts.emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                          primary_threshold, false, obj_pool,
-                                          current_exts);
+        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                          current_exts, num_objs,
+                                          primary_threshold, false);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                            primary_threshold, false, obj_pool,
-                                            current_exts);
+        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                            current_exts, num_objs,
+                                            primary_threshold, false);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
@@ -161,10 +162,10 @@ DataCenter no_exts_mix_objs_config(
     return data_center;
 }
 
-DataCenter stripe_level_with_extents_separate_pools_config(
+inline DataCenter stripe_level_with_extents_separate_pools_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 7;
@@ -190,9 +191,11 @@ DataCenter stripe_level_with_extents_separate_pools_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
-        obj_mngr, ext_mngr, num_objs, primary_threshold, false);
+        obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+        primary_threshold, false);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                          current_extents(), num_objs,
                                           primary_threshold, false);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
@@ -213,10 +216,10 @@ DataCenter stripe_level_with_extents_separate_pools_config(
     return data_center;
 }
 
-DataCenter stripe_level_with_extents_separate_pools_efficient_config(
+inline DataCenter stripe_level_with_extents_separate_pools_efficient_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 7;
@@ -241,10 +244,11 @@ DataCenter stripe_level_with_extents_separate_pools_efficient_config(
         make_shared<EfficientStriperWithEC>(make_shared<ExtentStackStriper>(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-    shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<SimpleObjectPacker>(obj_mngr, ext_mngr, num_objs);
+    shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
+        obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, num_objs);
+        make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                          current_extents(), num_objs);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
@@ -264,12 +268,12 @@ DataCenter stripe_level_with_extents_separate_pools_efficient_config(
     return data_center;
 }
 
-float get_timestamp() { return TIME; }
+inline float get_timestamp() { return TIME; }
 
-DataCenter age_based_config_no_exts(
+inline DataCenter age_based_config_no_exts(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -297,10 +301,12 @@ DataCenter age_based_config_no_exts(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                          current_extents(), num_objs,
                                           primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                            current_extents(), num_objs,
                                             primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
@@ -323,15 +329,14 @@ DataCenter age_based_config_no_exts(
     return data_center;
 }
 
-short get_time() { return TIME; }
+float get_time() { return TIME; }
 
-DataCenter age_based_config(const unsigned long data_center_size,
-                            const float striping_cycle, const float simul_time,
-                            const int ext_size, const short primary_threshold,
-                            const short secondary_threshold,
-                            const SimpleSampler *sampler,
-                            const short num_stripes_per_cycle,
-                            const float deletion_cycle, const int num_objs) {
+inline DataCenter age_based_config(
+    const unsigned long data_center_size, const float striping_cycle,
+    const float simul_time, const int ext_size, const short primary_threshold,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
+    const short num_stripes_per_cycle, const float deletion_cycle,
+    const int num_objs) {
     int num_data_exts = 7;
     float num_global_parities = 2;
     float num_local_parities = 2;
@@ -355,9 +360,11 @@ DataCenter age_based_config(const unsigned long data_center_size,
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, num_objs);
+        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                          current_extents(), num_objs);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs);
+        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                            current_extents(), num_objs);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
@@ -377,10 +384,10 @@ DataCenter age_based_config(const unsigned long data_center_size,
     return data_center;
 }
 
-DataCenter size_based_stripe_level_no_exts_baseline_config(
+inline DataCenter size_based_stripe_level_no_exts_baseline_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -408,11 +415,13 @@ DataCenter size_based_stripe_level_no_exts_baseline_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<SizeBasedObjectPackerBaseline>(obj_mngr, ext_mngr, num_objs,
-                                                   primary_threshold);
+        make_shared<SizeBasedObjectPackerBaseline>(
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerBaseline>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =
@@ -437,7 +446,7 @@ DataCenter size_based_stripe_level_no_exts_baseline_config(
 DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -466,10 +475,12 @@ DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<SizeBasedObjectPackerSmallerObj>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerSmallerObj>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =
@@ -492,10 +503,10 @@ DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
     return data_center;
 }
 
-DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
+inline DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -524,16 +535,16 @@ DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<SizeBasedObjectPackerDynamicStrategy>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerDynamicStrategy>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack =
-        static_pointer_cast<AbstractExtentStack>(
-            make_shared<WholeObjectExtentStack>(stripe_mngr));
+        make_shared<WholeObjectExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =
-        static_pointer_cast<AbstractExtentStack>(
-            make_shared<WholeObjectExtentStack>(stripe_mngr));
+        make_shared<WholeObjectExtentStack>(stripe_mngr);
     shared_ptr<StripingProcessCoordinator> coordinator =
         make_shared<StripingProcessCoordinator>(
             obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
@@ -553,10 +564,10 @@ ext_mngr, gc_striper))
     return data_center;
 }
 
-DataCenter size_based_whole_obj_config(
+inline DataCenter size_based_whole_obj_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 7;
@@ -583,10 +594,12 @@ DataCenter size_based_whole_obj_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<SizeBasedObjectPackerSmallerWholeObjFillGap>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerSmallerWholeObjFillGap>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold, true);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold, true);
     shared_ptr<AbstractExtentStack> extent_stack =
         static_pointer_cast<AbstractExtentStack>(
             make_shared<WholeObjectExtentStack>(stripe_mngr));
@@ -611,10 +624,10 @@ DataCenter size_based_whole_obj_config(
     return data_center;
 }
 
-DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
+inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 1;
@@ -643,10 +656,12 @@ DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<SizeBasedObjectPackerLargerWholeObj>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerLargerWholeObj>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
         static_pointer_cast<AbstractExtentStack>(
             make_shared<WholeObjectExtentStack>(stripe_mngr));
@@ -672,7 +687,7 @@ ext_mngr, gc_striper))
     return data_center;
 }
 
-int get_immortal_key() { return 0; }
+inline float get_immortal_key() { return 0; }
 
 /*not passing percent correct in
 percent_correct = 90
@@ -680,10 +695,10 @@ percent_correct = 80
 percent_correct = 70
 percent_correct = 60*/
 
-DataCenter mortal_immortal_no_exts_config(
+inline DataCenter mortal_immortal_no_exts_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
     int num_data_exts = 1;
@@ -712,18 +727,27 @@ DataCenter mortal_immortal_no_exts_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<MortalImmortalObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                                percent_correct);
+        make_shared<MortalImmortalObjectPacker>(obj_mngr, ext_mngr,
+                                                object_lst(), current_extents(),
+                                                num_objs, percent_correct);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<MortalImmortalGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                                  percent_correct);
+        make_shared<MortalImmortalGCObjectPacker>(
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            percent_correct);
 
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<StripingProcessCoordinator> coordinator =
-        make_shared<StripingProcessCoordinator>(
+        /*shared_ptr<SimpleObjectPacker> o_p,
+shared_ptr<SimpleGCObjectPacker> gc_o_p,
+shared_ptr<AbstractStriperDecorator> s,
+shared_ptr<AbstractStriperDecorator> gc_s,
+shared_ptr<AbstractExtentStack> e_s,
+shared_ptr<AbstractExtentStack> gc_e_s, shared_ptr<StripeManager> s_m,
+int s_t, float (*key)()*/
+        make_shared<BestEffortStripingProcessCoordinator>(
             obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
             gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
     /*TODO
@@ -739,10 +763,10 @@ secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
     return data_center;
 }
 
-DataCenter randomized_ext_placement_joined_pools_config(
+inline DataCenter randomized_ext_placement_joined_pools_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 7;
@@ -767,17 +791,15 @@ DataCenter randomized_ext_placement_joined_pools_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-    shared_ptr<unordered_map<Extent_Object *, double>> obj_pool =
-        make_shared<unordered_map<Extent_Object *, double>>();
-    shared_ptr<map<int, Extent *>> current_exts =
-        make_shared<map<int, Extent *>>();
-    current_exts->emplace(0, ext_mngr->create_extent());
+    object_lst obj_pool = object_lst();
+    current_extents current_exts;
+    current_exts.emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                          obj_pool, current_exts);
+        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                          current_exts, num_objs);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                            obj_pool, current_exts);
+        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                            current_exts, num_objs);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<ExtentStackRandomizer>(
             make_shared<SingleExtentStack>(stripe_mngr));
@@ -799,10 +821,10 @@ DataCenter randomized_ext_placement_joined_pools_config(
     return data_center;
 }
 
-DataCenter randomized_obj_placement_joined_pools_config(
+inline DataCenter randomized_obj_placement_joined_pools_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
     int num_data_exts = 7;
@@ -828,10 +850,12 @@ DataCenter randomized_obj_placement_joined_pools_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                            current_extents(), num_objs,
                                             primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                              current_extents(), num_objs,
                                               primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
@@ -857,10 +881,10 @@ DataCenter randomized_obj_placement_joined_pools_config(
     return data_center;
 }
 
-DataCenter randomized_objs_no_exts_config(
+inline DataCenter randomized_objs_no_exts_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
     int num_data_exts = 1;
@@ -891,10 +915,12 @@ DataCenter randomized_objs_no_exts_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                            current_extents(), num_objs,
                                             primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+                                              current_extents(), num_objs,
                                               primary_threshold);
 
     shared_ptr<AbstractExtentStack> extent_stack =
@@ -902,7 +928,7 @@ DataCenter randomized_objs_no_exts_config(
     shared_ptr<AbstractExtentStack> gc_extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<StripingProcessCoordinator> coordinator =
-        make_shared<StripingProcessCoordinator>(
+        make_shared<BestEffortStripingProcessCoordinator>(
             obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
             gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
     /*TODO
@@ -918,10 +944,10 @@ secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
     return data_center;
 }
 
-DataCenter randomized_objs_no_exts_mix_objs_config(
+inline DataCenter randomized_objs_no_exts_mix_objs_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
     int num_data_exts = 1;
@@ -949,20 +975,18 @@ DataCenter randomized_objs_no_exts_mix_objs_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
-    shared_ptr<unordered_map<Extent_Object *, double>> obj_pool =
-        make_shared<unordered_map<Extent_Object *, double>>();
-    shared_ptr<map<int, Extent *>> current_exts =
-        make_shared<map<int, Extent *>>();
-    current_exts->emplace(0, ext_mngr->create_extent());
+    object_lst obj_pool = object_lst();
+    current_extents current_exts;
+    current_exts.emplace(0, ext_mngr->create_extent());
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                            obj_pool, primary_threshold,
-                                            current_exts);
+        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                            current_exts, num_objs,
+                                            primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                              obj_pool, primary_threshold,
-                                              current_exts);
+        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+                                              current_exts, num_objs,
+                                              primary_threshold);
 
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
@@ -984,10 +1008,10 @@ secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
     return data_center;
 }
 
-DataCenter age_based_rand_config_no_exts(
+inline DataCenter age_based_rand_config_no_exts(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
     int num_data_exts = 1;
@@ -1017,10 +1041,12 @@ DataCenter age_based_rand_config_no_exts(
 
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<AgeBasedRandomizedObjectPacker>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<AgeBasedRandomizedGCObjectPacker>(
-            obj_mngr, ext_mngr, num_objs, primary_threshold);
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
 
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
@@ -1045,10 +1071,10 @@ secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
 
 int default_key() { return 0; }
 
-DataCenter generational_config(
+inline DataCenter generational_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
-    const short secondary_threshold, const SimpleSampler *sampler,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
     int num_data_exts = 7;
@@ -1076,16 +1102,16 @@ DataCenter generational_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<GenerationBasedObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                                 primary_threshold);
+        make_shared<GenerationBasedObjectPacker>(
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<GenerationBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                                   primary_threshold);
-    shared_ptr<unordered_map<Extent_Object *, double>> obj_pool =
-        make_shared<unordered_map<Extent_Object *, double>>();
-    shared_ptr<map<int, Extent *>> current_exts =
-        make_shared<map<int, Extent *>>();
-    current_exts->emplace(0, ext_mngr->create_extent());
+        make_shared<GenerationBasedGCObjectPacker>(
+            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            primary_threshold);
+    object_lst obj_pool = object_lst();
+    current_extents current_exts;
+    current_exts.emplace(0, ext_mngr->create_extent());
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =
