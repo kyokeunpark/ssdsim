@@ -138,9 +138,9 @@ DataCenter no_exts_mix_objs_config(
                                           primary_threshold, false, obj_pool,
                                           current_exts);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        qmake_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
-                                             primary_threshold, false, obj_pool,
-                                             current_exts);
+        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, num_objs,
+                                            primary_threshold, false, obj_pool,
+                                            current_exts);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<SingleExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;

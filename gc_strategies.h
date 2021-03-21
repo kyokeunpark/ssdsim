@@ -148,17 +148,16 @@ class StripeLevelNoExtsGCStrategy : public GarbageCollectionStrategy {
             return ret;
         }
         stripe_manager->delete_stripe(stripe);
-        array<int, 3> generate_res =
+        str_costs generate_res =
             striping_process_coordinator->generate_gc_stripes();
-        int num_stripes = generate_res[0];
-        int reads = generate_res[1];
-        int writes = generate_res[2];
+        int num_stripes = generate_res.stripes;
+        int reads = generate_res.reads;
+        int writes = generate_res.writes;
         if (num_stripes < 1) {
-            array<int, 3> stripe_res =
-                striping_process_coordinator->get_stripe();
-            num_stripes = generate_res[0];
-            reads = generate_res[1];
-            writes = generate_res[2];
+            str_costs stripe_res = striping_process_coordinator->get_stripe();
+            num_stripes = generate_res.stripes;
+            reads = generate_res.reads;
+            writes = generate_res.writes;
         } else {
             ret.user_reads = reads;
             ret.user_writes = writes;
@@ -479,7 +478,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             for (Stripe *d : deleted) {
                 stripe_set.erase(d);
             }
-            striping_process_coordinator->generate_extents();
+            striping_process_coordinator->generate();
             striping_process_coordinator->generate_objs(ret.reclaimed_space);
             striping_process_coordinator->pack_exts(
                 ret.total_num_exts_replaced);
