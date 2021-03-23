@@ -1,8 +1,9 @@
 #pragma once
+
+#include <array>
 #include "stripe_manager.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
-#include <array>
 
 typedef struct stripe_costs {
     int stripes;
@@ -33,23 +34,21 @@ class AbstractStriper{
         shared_ptr<ExtentManager> extent_manager;
         int num_times_alternatives;
         int num_times_default;
-        AbstractStriper(){}
+
         AbstractStriper(shared_ptr<StripeManager> s_m, shared_ptr<ExtentManager> e_m):
             stripe_manager(s_m), extent_manager(e_m), num_times_alternatives(0),
             num_times_default(0){}
+        
+        virtual ~AbstractStriper() {}
 
         virtual str_costs create_stripes
-            (shared_ptr<AbstractExtentStack> extent_stack, int simulation_time);
-        virtual str_costs  create_stripe
-            (shared_ptr<AbstractExtentStack>  extent_stack, int simulation_time);
-        virtual repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality);
-        virtual repl_costs cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
-                vector<int>  obs_data_per_locality, vector<int>valid_objs_per_locality);
+            (shared_ptr<AbstractExtentStack> extent_stack, int simulation_time) = 0;
+        virtual repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality) = 0;
         virtual double cost_to_write_data(int data) = 0;
         virtual int num_stripes_reqd() = 0;
 };
 
-class SimpleStriper : public AbstractStriper{
+class SimpleStriper : public AbstractStriper {
     public:
         using AbstractStriper::AbstractStriper;
         list<string> ext_types;
@@ -91,15 +90,30 @@ class SimpleStriper : public AbstractStriper{
 
 class AbstractStriperDecorator:public AbstractStriper
 {
-    public:
+    protected:
         shared_ptr<AbstractStriper> striper;
-        AbstractStriperDecorator(shared_ptr<AbstractStriper> s):striper(s){}
+
+    public:
+        AbstractStriperDecorator(shared_ptr<AbstractStriper> s)
+                : AbstractStriper(s->stripe_manager, s->extent_manager), striper(s){}
+
+        virtual str_costs  create_stripe
+            (shared_ptr<AbstractExtentStack>  extent_stack, int simulation_time) = 0;
+
+        virtual repl_costs cost_to_replace_extents(int ext_size, vector<int> exts_per_locality, 
+                vector<int>  obs_data_per_locality, vector<int>valid_objs_per_locality)
+        {
+            return repl_costs();
+        }
+
+        virtual repl_costs  cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality) { return repl_costs(); };
 };
 
 class ExtentStackStriper: public AbstractStriperDecorator
 {
     public:
     using AbstractStriperDecorator::AbstractStriperDecorator;
+
     int num_stripes_reqd() override
     {
         return 0;
@@ -120,7 +134,7 @@ class ExtentStackStriper: public AbstractStriperDecorator
         int num_exts = stripe_manager->num_data_exts_per_stripe;
         str_costs total = {0};
         if(extent_stack->num_stripes(num_exts))
-            total += striper->create_stripe(extent_stack, simulation_time);
+            total += striper->create_stripes(extent_stack, simulation_time);
         total.stripes += 1;
         return total;
     }
@@ -140,7 +154,7 @@ class NumStripesStriper: public AbstractStriperDecorator
 {
     public:
     int num_stripes_per_cycle;
-    NumStripesStriper(int n, shared_ptr<AbstractStriper> s):AbstractStriperDecorator(s),  num_stripes_per_cycle(n){}
+    NumStripesStriper(int n, shared_ptr<AbstractStriper> s) : AbstractStriperDecorator(s),  num_stripes_per_cycle(n){}
 
     int num_stripes_reqd() override
     {
@@ -157,7 +171,7 @@ class NumStripesStriper: public AbstractStriperDecorator
 
     str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack, int simulation_time) override
     {
-        return striper->create_stripe(extent_stack, simulation_time);
+        return striper->create_stripes(extent_stack, simulation_time);
     }
 
     repl_costs cost_to_replace_extents(int ext_size, int exts_per_locality, double obs_data_per_locality) override
@@ -170,14 +184,14 @@ class NumStripesStriper: public AbstractStriperDecorator
     }
 };
 
-
-
-
-
 class StriperWithEC: public AbstractStriperDecorator
 {
-    public:
-    using AbstractStriperDecorator::AbstractStriperDecorator;
+
+protected:
+    shared_ptr<AbstractStriperDecorator> striper;
+public:
+    StriperWithEC(shared_ptr<AbstractStriperDecorator> s)
+            : AbstractStriperDecorator(s), striper(s) {}
 
     int num_stripes_reqd() override
     {

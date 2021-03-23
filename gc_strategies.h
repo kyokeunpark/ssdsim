@@ -11,6 +11,7 @@
 #include <set>
 #include <unordered_map>
 #include <vector>
+#include <cassert>
 typedef unordered_map<string, float> ext_type_cost_map;
 typedef unordered_map<string, short> obj_ext_type_map;
 typedef unordered_map<string, short> gc_ext_type_num_map;
@@ -179,7 +180,7 @@ class StripeLevelNoExtsGCStrategy : public GarbageCollectionStrategy {
             // percentage return?
             double obsolete = stripe->get_obsolete_percentage();
             if (obsolete >= primary_threshold && stripe != nullptr) {
-                printf("%f %d", TIME, stripe->id);
+                printf("%d %d", TIME, stripe->id);
                 stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                 for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
                     string key = kv.first;
@@ -327,7 +328,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             // percentage return?
             double obsolete = stripe->get_obsolete_percentage();
             if (obsolete >= primary_threshold && stripe != nullptr) {
-                printf("%f %d", TIME, stripe->id);
+                printf("%d %d", TIME, stripe->id);
                 stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                 for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
                     string key = kv.first;
@@ -437,7 +438,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             for (auto stripe : stripe_lst) {
                 double obsolete = stripe->get_obsolete_percentage();
                 if (obsolete >= primary_threshold && stripe != nullptr) {
-                    printf("%f %d", TIME, stripe->id);
+                    printf("%d %d", TIME, stripe->id);
                     stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                     for (auto &kv :
                          stripe_gc_res.reclaimed_space_by_ext_types) {

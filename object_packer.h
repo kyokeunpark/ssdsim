@@ -30,17 +30,19 @@ bool operator<(obj_record &record, const int v) { return record.second < v; }
 class ObjectPacker {
 
   public:
+	virtual ~ObjectPacker() {}
+
     /*
      * Method for adding items to the object pool. Each object packer can
      * decide on the best policy for adding the object into the pool.
      */
-    virtual void add_obj(Extent_Object *object, int obj_size);
+    virtual void add_obj(Extent_Object *object, int obj_size) = 0;
 
     /*
      * Method for packing objects into extents. Each packer decides on the
      * policy of how to pack objects into extents.
      */
-    virtual void pack_objects();
+    virtual void pack_objects() {};
 };
 
 class GenericObjectPacker : public ObjectPacker {
@@ -224,7 +226,7 @@ class GenericObjectPacker : public ObjectPacker {
      * corresponding key for each object in current_extents and calls
      * add_obj_to_current_ext_at_key.
      */
-    virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack);
+    virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack) {};
     // TODO: extent_stack might need to be a pointer here
 };
 

@@ -31,18 +31,23 @@ class AbstractExtentStack {
     shared_ptr<StripeManager> stripe_manager;
 
   public:
-    AbstractExtentStack() {}
+    AbstractExtentStack() : stripe_manager(nullptr) {}
     AbstractExtentStack(shared_ptr<StripeManager> s_m) : stripe_manager(s_m) {}
+    virtual ~AbstractExtentStack() {}
 
     virtual int num_stripes(int stripe_size) = 0;
-    virtual stack_val pop_stripe_num_exts(int stripe_size);
-    virtual void add_extent(int key, Extent *ext);
-    virtual int get_length_of_extent_stack();
-    virtual int get_length_at_key(int key);
-    virtual Extent *get_extent_at_key(int key);
-    virtual bool contains_extent(Extent *extent);
-    virtual void remove_extent(Extent *extent);
-    virtual Extent *get_extent_at_closest_key(int key);
+    virtual stack_val pop_stripe_num_exts(int stripe_size) = 0;
+    virtual void add_extent(int key, Extent *ext) = 0;
+    virtual int get_length_of_extent_stack() = 0;
+    virtual int get_length_at_key(int key) = 0;
+    virtual Extent *get_extent_at_key(int key) = 0;
+    virtual bool contains_extent(Extent *extent) = 0;
+    virtual void remove_extent(Extent *extent) = 0;
+
+    virtual Extent *get_extent_at_closest_key(int key)
+    {
+        return this->get_extent_at_key(key);
+    }
 };
 
 class ExtentStack : public AbstractExtentStack {
@@ -183,7 +188,7 @@ class BestEffortExtentStack : public SingleExtentStack {
   public:
     using SingleExtentStack::SingleExtentStack;
     // double check correctness
-    Extent *get_extent_at_closest_key(int key) {
+    Extent *get_extent_at_closest_key(int key) override {
         if (extent_stack.size() == 1) {
             return get_extent_at_key(extent_stack.begin()->first);
         }
@@ -237,7 +242,7 @@ class ExtentStackRandomizer : public AbstractExtentStack {
         }
         return extent_stack->pop_stripe_num_exts(stripe_size);
     }
-    Extent *get_extent_at_closest_key(int key) override {
+    Extent *get_extent_at_closest_key(int key) {
         for (auto &kv : extent_stack->get_extent_stack()) {
             auto rng = std::default_random_engine{};
             std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
@@ -253,14 +258,14 @@ class ExtentStackRandomizer : public AbstractExtentStack {
     }
 };
 
-class WholeObjectExtentStack : public AbstractExtentStack {
-    using AbstractExtentStack::AbstractExtentStack;
+class WholeObjectExtentStack : public ExtentStack {
+    using ExtentStack::ExtentStack;
 
     ext_lst_stack extent_stack;
 
   public:
     WholeObjectExtentStack(shared_ptr<StripeManager> stripe_manager)
-        : AbstractExtentStack(stripe_manager) {
+        : ExtentStack(stripe_manager) {
         this->extent_stack = ext_lst_stack();
     }
 
