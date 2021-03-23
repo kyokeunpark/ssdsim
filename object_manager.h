@@ -1,10 +1,10 @@
 #pragma once
-#include "stripe.h"
+#include <random>
+#include <memory>
+#include "extent_object_stripe.h"
 #include "event_manager.h"
 #include "samplers.h"
 #include "config.h"
-#include <random>
-#include <memory>
 
 using std::shared_ptr;
 using obj_record = std::pair<ExtentObject*, int>;

@@ -7,6 +7,9 @@
 #include "stripe_manager.h"
 #include "stripers.h"
 #include <memory>
+
+using std::cout, std::cerr, std::endl;
+
 template <class extent_stack_value_type, class extent_stack_key_type, class sim_T>
 class StripingProcessCoordinator{
     public:

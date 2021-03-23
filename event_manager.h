@@ -1,8 +1,10 @@
 #pragma once
 #include <queue>
 #include <list>
-#include "extent_object.h"
-using namespace std;
+#include "extent_object_stripe.h"
+
+using std::priority_queue;
+using std::list;
 
 //im using std tuple
 typedef std::tuple<int,ExtentObject *> event;

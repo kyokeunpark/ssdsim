@@ -11,6 +11,12 @@
 #include <memory>
 #include <variant>
 #include "samplers.h"
+
+using std::map;
+using std::make_shared;
+using std::static_pointer_cast;
+using std::cout, std::cerr, std::endl;
+
 // typedef int sim_T;
 template<class K>
 std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>, shared_ptr<ExtentManager>> create_managers

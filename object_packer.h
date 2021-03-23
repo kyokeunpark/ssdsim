@@ -11,8 +11,7 @@
 #include "object_manager.h"
 #include "extent_manager.h"
 #include "extent_stack.h"
-#include "extent_object.h"
-#include "extent.h"
+#include "extent_object_stripe.h"
 
 using current_extents = std::unordered_map<int, Extent*>;
 using ext_types_mgr = std::unordered_map<string, int>;

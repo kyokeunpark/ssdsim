@@ -1,5 +1,5 @@
 #pragma once
-#include "extent.h"
+#include "extent_object_stripe.h"
 #include <unordered_map>
 
 class ExtentManager{
