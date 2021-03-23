@@ -20,9 +20,13 @@
 using current_extents = std::unordered_map<int, Extent *>;
 using ext_types_mgr = std::unordered_map<string, int>;
 
-bool operator<(const int v, obj_record &record) { return v < record.second; }
+bool operator<(const int v, const obj_record &record) {
+    return v < record.second;
+}
 
-bool operator<(obj_record &record, const int v) { return record.second < v; }
+bool operator<(const obj_record &record, const int v) {
+    return record.second < v;
+}
 
 /*
  * Interface for ObjectPackers to follow
@@ -30,7 +34,7 @@ bool operator<(obj_record &record, const int v) { return record.second < v; }
 class ObjectPacker {
 
   public:
-	virtual ~ObjectPacker() {}
+    virtual ~ObjectPacker() {}
 
     /*
      * Method for adding items to the object pool. Each object packer can
@@ -42,7 +46,7 @@ class ObjectPacker {
      * Method for packing objects into extents. Each packer decides on the
      * policy of how to pack objects into extents.
      */
-    virtual void pack_objects() {};
+    virtual void pack_objects(){};
 };
 
 class GenericObjectPacker : public ObjectPacker {
@@ -226,7 +230,7 @@ class GenericObjectPacker : public ObjectPacker {
      * corresponding key for each object in current_extents and calls
      * add_obj_to_current_ext_at_key.
      */
-    virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack) {};
+    virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack){};
     // TODO: extent_stack might need to be a pointer here
 };
 

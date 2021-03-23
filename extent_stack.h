@@ -44,8 +44,7 @@ class AbstractExtentStack {
     virtual bool contains_extent(Extent *extent) = 0;
     virtual void remove_extent(Extent *extent) = 0;
 
-    virtual Extent *get_extent_at_closest_key(int key)
-    {
+    virtual Extent *get_extent_at_closest_key(int key) {
         return this->get_extent_at_key(key);
     }
 };
@@ -242,7 +241,7 @@ class ExtentStackRandomizer : public AbstractExtentStack {
         }
         return extent_stack->pop_stripe_num_exts(stripe_size);
     }
-    Extent *get_extent_at_closest_key(int key) {
+    Extent *get_extent_at_closest_key(int key) override {
         for (auto &kv : extent_stack->get_extent_stack()) {
             auto rng = std::default_random_engine{};
             std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
