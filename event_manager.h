@@ -5,7 +5,7 @@
 using namespace std;
 
 //im using std tuple
-typedef std::tuple<int,Extent_Object *> event;
+typedef std::tuple<int,ExtentObject *> event;
 class EventManager{
     public:
         priority_queue<event>* events;
@@ -14,7 +14,7 @@ class EventManager{
         }
 
 
-        void put_event(int life, Extent_Object * obj){
+        void put_event(int life, ExtentObject * obj){
             events->emplace(event(life, obj));
         }
 

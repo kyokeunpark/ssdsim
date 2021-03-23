@@ -5,7 +5,7 @@
 #include "extent_object_shard.h"
 using namespace std;
 
-class Extent_Object {
+class ExtentObject {
     public:
         int id;
         int size;
@@ -15,16 +15,16 @@ class Extent_Object {
         int num_times_gced;
         list<Extent_Object_Shard*>* shards;
 
-        Extent_Object(int s, float l) 
+        ExtentObject(int s, float l) 
         : size(s), life(l), generation(0), num_times_gced(0), 
           creation_time(time(nullptr)), shards(new list<Extent_Object_Shard*>()){}
 
-        ~Extent_Object()
+        ~ExtentObject()
         {
           delete shards;
         }
 
-		bool operator<(const Extent_Object & other)
+		bool operator<(const ExtentObject & other)
 		{
 			return this->id < other.id;
 		}

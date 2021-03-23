@@ -4,19 +4,21 @@
 #include "samplers.h"
 #include "config.h"
 #include <random>
+#include <memory>
 
-using obj_record = std::pair<Extent_Object*, int>;
+using std::shared_ptr;
+using obj_record = std::pair<ExtentObject*, int>;
 using object_lst = std::vector<obj_record>;
 
 class ObjectManager{
     public:
-        list<Extent_Object*>* objects;
+        list<ExtentObject*>* objects;
         shared_ptr<EventManager> event_manager;
         shared_ptr<Sampler> sampler;
         bool add_noise;
         
         ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s, bool a_n = true):
-        objects(new list<Extent_Object*>()), event_manager(e_m), sampler(s), add_noise(a_n){
+        objects(new list<ExtentObject*>()), event_manager(e_m), sampler(s), add_noise(a_n){
             //np.random.seed(0)
             srand(0);
         }
@@ -38,7 +40,7 @@ class ObjectManager{
                     life += noise/24;
                 }
                 life += TIME;
-                Extent_Object * obj = new Extent_Object(size, life);
+                ExtentObject * obj = new ExtentObject(size, life);
                 new_objs.emplace_back(std::make_pair(obj, size));
                 this->objects->push_back(obj);
                 event_manager->put_event(life, obj);
@@ -51,7 +53,7 @@ class ObjectManager{
             return objects->size();
         }
 
-        void remove_object(Extent_Object * obj)
+        void remove_object(ExtentObject * obj)
         {
             objects->remove(obj);
         }

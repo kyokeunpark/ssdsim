@@ -2,7 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include "extent_object.h"
-using obj_record = std::pair<Extent_Object*, int>;
+using obj_record = std::pair<ExtentObject*, int>;
 using object_lst = std::vector<obj_record>;
 using namespace std;
 class Extent {
@@ -11,7 +11,7 @@ class Extent {
         double free_space;
         double ext_size;
 
-        unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > * objects;
+        unordered_map<ExtentObject*, list<Extent_Object_Shard*>* > * objects;
         unordered_map<int, vector<int>> obj_ids_to_obj_size;
         int locality;
         int generation;
@@ -36,7 +36,7 @@ class Extent {
 
         Extent(int e_s, int s_t)
         :obsolete_space(0),free_space(e_s), ext_size(e_s),
-        objects(new unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > () ),
+        objects(new unordered_map<ExtentObject*, list<Extent_Object_Shard*>* > () ),
         locality(0), generation(0), timestamp(0), type(0),
         secondary_threshold(s_t)
         {}
@@ -51,7 +51,7 @@ class Extent {
             return difftime(time(nullptr), timestamp);
         }
 
-        double get_obj_size(Extent_Object * obj)
+        double get_obj_size(ExtentObject * obj)
         {
             double sum = 0;
             auto it = objects->find(obj);
@@ -66,7 +66,7 @@ class Extent {
             return obsolete_space/ext_size * 100;
         }
 
-        int add_object(Extent_Object* obj, int size, int generation = 0)
+        int add_object(ExtentObject* obj, int size, int generation = 0)
         {
             int temp_size = size < free_space?size:free_space;
             int obj_id = obj->id;
@@ -99,7 +99,7 @@ class Extent {
             objects = NULL;
         }
 
-        double del_object(Extent_Object* obj)
+        double del_object(ExtentObject* obj)
         {
             double sum = 0;
             auto it = objects->find(obj);
@@ -123,11 +123,11 @@ class Extent {
                 for(Extent_Object_Shard* s: *it.second)
                 {
                     sum += s->shard_size;
-                    ret.push_back(make_pair(it.first, sum));
+                    ret.push_back(std::make_pair(it.first, sum));
                 }
             }
             delete objects;
-            objects = new unordered_map<Extent_Object*, list<Extent_Object_Shard*>* > ();
+            objects = new unordered_map<ExtentObject*, list<Extent_Object_Shard*>* > ();
             generation = 0;
             free_space = ext_size;
             return ret;

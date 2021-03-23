@@ -27,7 +27,7 @@ public:
 	 * Method for adding items to the object pool. Each object packer can
 	 * decide on the best policy for adding the object into the pool.
 	 */
-	virtual void add_obj(Extent_Object * object, int obj_size) = 0;
+	virtual void add_obj(ExtentObject * object, int obj_size) = 0;
 
 	/*
 	 * Method for packing objects into extents. Each packer decides on the
@@ -71,7 +71,7 @@ public:
 	 * deleting from an extent only part of the object should be put back
 	 * in the pool and repacked.
 	 */
-	void add_obj(Extent_Object * object, int obj_size)
+	void add_obj(ExtentObject * object, int obj_size)
 	{
 		this->obj_pool.emplace_back(std::make_pair(object, obj_size));
 	}
@@ -190,7 +190,7 @@ public:
 	}
 
 	void add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-			Extent_Object * obj, int obj_rem_size, int key)
+			ExtentObject * obj, int obj_rem_size, int key)
 	{
 		int temp = 0;
 		if (this->current_exts.find(key) == this->current_exts.end())
