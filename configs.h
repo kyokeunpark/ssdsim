@@ -11,6 +11,12 @@
 #include <memory>
 #include <variant>
 #include "samplers.h"
+
+using std::map;
+using std::make_shared;
+using std::static_pointer_cast;
+using std::cout, std::cerr, std::endl;
+
 // typedef int sim_T;
 template<class K>
 std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<ObjectManager>, shared_ptr<ExtentManager>> create_managers
@@ -94,7 +100,7 @@ DataCenter<Extent *, int, sim_T>  no_exts_mix_objs_config(const unsigned long da
  	shared_ptr<AbstractStriperDecorator>  striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
     shared_ptr<AbstractStriperDecorator>  gc_striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-	shared_ptr<unordered_map<Extent_Object*, double > > obj_pool = make_shared<unordered_map<Extent_Object*, double >>();
+	shared_ptr<unordered_map<ExtentObject*, double > > obj_pool = make_shared<unordered_map<ExtentObject*, double >>();
     shared_ptr<map<int, Extent *>>  current_exts = make_shared<map<int, Extent *>>();
     current_exts->emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold,false, obj_pool, current_exts);
@@ -532,7 +538,7 @@ DataCenter<Extent *, int, sim_T>  randomized_ext_placement_joined_pools_config(c
  	shared_ptr<AbstractStriperDecorator>  striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
     shared_ptr<AbstractStriperDecorator>  gc_striper = striper;
-	shared_ptr<unordered_map<Extent_Object*, double > > obj_pool = make_shared<unordered_map<Extent_Object*, double >>();
+	shared_ptr<unordered_map<ExtentObject*, double > > obj_pool = make_shared<unordered_map<ExtentObject*, double >>();
     shared_ptr<map<int, Extent *>>  current_exts = make_shared<map<int, Extent *>>();
     current_exts->emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, num_objs, obj_pool, current_exts);
@@ -648,7 +654,7 @@ DataCenter<Extent *, int, sim_T>  randomized_objs_no_exts_mix_objs_config(const 
     shared_ptr<AbstractStriperDecorator> striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
-	shared_ptr<unordered_map<Extent_Object*, double > > obj_pool = make_shared<unordered_map<Extent_Object*, double >>();
+	shared_ptr<unordered_map<ExtentObject*, double > > obj_pool = make_shared<unordered_map<ExtentObject*, double >>();
     shared_ptr<map<int, Extent *>>  current_exts = make_shared<map<int, Extent *>>();
     current_exts->emplace(0, ext_mngr->create_extent());
 
@@ -739,7 +745,7 @@ DataCenter<Extent *, int, sim_T>  generational_config(const unsigned long data_c
 
     shared_ptr<SimpleObjectPacker> obj_packer = make_shared<GenerationBasedObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer = make_shared<GenerationBasedGCObjectPacker>(obj_mngr, ext_mngr, num_objs, primary_threshold);
-    shared_ptr<unordered_map<Extent_Object*, double > > obj_pool = make_shared<unordered_map<Extent_Object*, double >>();
+    shared_ptr<unordered_map<ExtentObject*, double > > obj_pool = make_shared<unordered_map<ExtentObject*, double >>();
     shared_ptr<map<int, Extent *>>  current_exts = make_shared<map<int, Extent *>>();
     current_exts->emplace(0, ext_mngr->create_extent());
 	shared_ptr<AbstractExtentStack> extent_stack = make_shared<BestEffortExtentStack>(stripe_mngr);

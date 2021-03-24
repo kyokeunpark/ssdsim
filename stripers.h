@@ -4,6 +4,8 @@
 #include "extent_stack.h"
 #include <array>
 
+using std::array;
+
 typedef struct replacement_costs {
     int global_parity_reads;
     int global_parity_writes;

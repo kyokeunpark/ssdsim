@@ -5,7 +5,11 @@
 #include <algorithm>
 #include <memory>
 #include <random>
+
+using std::min;
+using std::max;
 typedef list<Extent *>* extent_stack_ext_lst;
+
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
