@@ -1,14 +1,8 @@
 #ifndef __OBJECT_PACKER_H_
 #define __OBJECT_PACKER_H_
 
-#include "stripers.h"
-#include <queue>
 #pragma once
 
-#include "extent_manager.h"
-#include "extent_object_stripe.h"
-#include "extent_stack.h"
-#include "object_manager.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -18,9 +12,17 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <queue>
+#include "stripers.h"
+#include "extent_manager.h"
+#include "extent_object_stripe.h"
+#include "extent_stack.h"
+#include "object_manager.h"
+
 typedef std::tuple<float, ExtentObject *, int> obj_pq_record;
 using current_extents = std::unordered_map<int, Extent *>;
 using ext_types_mgr = std::unordered_map<string, int>;
+
 inline bool operator>(const obj_record &p1, const obj_record p2) {
     return p1.second > p2.second;
 };
@@ -33,9 +35,9 @@ bool operator<(const obj_record &record, const int v) {
     return record.second < v;
 }
 inline bool obj_record_less(const obj_record &p1, const obj_record p2) {
-    if (p1.second == p2.second) {
+    if (p1.second == p2.second)
         return p1.first < p2.first;
-    }
+    return p1.second < p2.second;
 };
 
 /*

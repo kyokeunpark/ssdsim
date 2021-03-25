@@ -10,11 +10,14 @@
 #include <set>
 #include <unordered_map>
 #include <vector>
+#include <cassert>
+
 typedef unordered_map<string, float> ext_type_cost_map;
 typedef unordered_map<string, short> obj_ext_type_map;
 typedef unordered_map<string, short> gc_ext_type_num_map;
 typedef unordered_map<string, int> space_ext_type_map;
 using std::set;
+
 struct gc_handler_ret {
     short reclaimed_space = 0, total_user_reads = 0, total_user_writes = 0,
           total_global_parity_reads = 0, total_global_parity_writes = 0,
