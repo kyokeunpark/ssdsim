@@ -1,12 +1,12 @@
 #pragma once
 
 #include "extent_object_shard.h"
+#include <any>
 #include <ctime>
 #include <iostream>
 #include <list>
 #include <unordered_map>
 #include <vector>
-
 class Extent;
 class ExtentObject;
 class Stripe;
@@ -29,8 +29,8 @@ class ExtentObject {
     list<Extent_Object_Shard *> *shards;
     vector<Extent *> extents;
 
-    ExtentObject(int s, float l)
-        : size(s), life(l), generation(0), num_times_gced(0),
+    ExtentObject(int id, int s, float l)
+        : id(id), size(s), life(l), generation(0), num_times_gced(0),
           creation_time(time(nullptr)),
           shards(new list<Extent_Object_Shard *>()),
           extents(vector<Extent *>()) {}
@@ -46,6 +46,7 @@ class ExtentObject {
     void add_extent(Extent *e) { this->extents.emplace_back(e); }
 
     int get_default_key() { return 0; }
+    float get_generation() { return generation; }
 };
 
 class Extent {
@@ -62,11 +63,11 @@ class Extent {
     string type;
     int secondary_threshold;
 
-    int get_default_key() { return 0; }
+    float get_default_key() { return 0.0; }
 
     float get_timestamp() { return timestamp; }
 
-    int get_generation() { return generation; }
+    float get_generation() { return generation; }
 
     Extent(int e_s, int s_t)
         : obsolete_space(0), free_space(e_s), ext_size(e_s),
@@ -157,6 +158,7 @@ class Extent {
 
 class Stripe {
   public:
+    int id;
     double obsolete;
     int num_data_blocks;
     int num_localities;
@@ -166,16 +168,16 @@ class Stripe {
     double timestamp;
     int stripe_size;
     int primary_threshold;
-    list<Extent *> *extents;
+    list<Extent *> extents;
 
-    Stripe(int num_data_extents_per_locality, int num_localities, int ext_size,
-           int primary_threshold)
-        : obsolete(0), num_data_blocks(num_data_extents_per_locality),
+    Stripe(int id, int num_data_extents_per_locality, int num_localities,
+           int ext_size, int primary_threshold)
+        : id(id), obsolete(0), num_data_blocks(num_data_extents_per_locality),
           num_localities(num_localities),
           free_space(num_localities * num_data_extents_per_locality),
           localities(new vector<int>(num_localities, 0)), ext_size(ext_size),
           timestamp(0), stripe_size(0), primary_threshold(primary_threshold),
-          extents(new list<Extent *>()) {
+          extents(list<Extent *>()) {
         for (int i = 0; i < num_data_blocks * num_localities; ++i) {
             this->stripe_size += ext_size;
         }
@@ -202,7 +204,7 @@ class Stripe {
 
     void add_extent(Extent *ext) {
         if (free_space) {
-            extents->push_back(ext);
+            extents.push_back(ext);
             free_space -= 1;
             int locality = 0;
             while ((*localities)[locality] == num_data_blocks) {
@@ -222,7 +224,10 @@ class Stripe {
         ext->remove_objects();
         (*localities)[ext->locality] -= 1;
         obsolete -= ext->obsolete_space;
-        extents->remove(ext);
+        extents.remove(ext);
         free_space += 1;
     }
 };
+inline bool operator<(const ExtentObject &a, const ExtentObject &b) {
+    return a.id < b.id;
+}

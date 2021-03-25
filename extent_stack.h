@@ -41,12 +41,16 @@ class AbstractExtentStack {
 
     virtual int num_stripes(int stripe_size) = 0;
     virtual stack_val pop_stripe_num_exts(int stripe_size) = 0;
-    virtual void add_extent(int key, Extent *ext) = 0;
+    virtual void add_extent(int key, Extent *ext){};
     virtual int get_length_of_extent_stack() = 0;
     virtual int get_length_at_key(int key) = 0;
     virtual Extent *get_extent_at_key(int key) = 0;
     virtual bool contains_extent(Extent *extent) = 0;
     virtual void remove_extent(Extent *extent) = 0;
+    virtual Extent *get_extent_at_closest_key(int key) { return nullptr; };
+    virtual void add_extent(stack_val &ext_lst) {
+        std::cerr << "extent stack virtual add extent!";
+    }
 };
 
 class ExtentStack : public AbstractExtentStack {
@@ -213,8 +217,8 @@ class BestEffortExtentStack : public SingleExtentStack {
 };
 class ExtentStackRandomizer : public AbstractExtentStack {
   public:
-    std::shared_ptr<BestEffortExtentStack> extent_stack;
-    ExtentStackRandomizer(std::shared_ptr<BestEffortExtentStack> e_s)
+    std::shared_ptr<SingleExtentStack> extent_stack;
+    ExtentStackRandomizer(std::shared_ptr<SingleExtentStack> e_s)
         : extent_stack(e_s) {}
     int num_stripes(int stripe_size) override {
         return extent_stack->num_stripes(stripe_size);
@@ -241,7 +245,7 @@ class ExtentStackRandomizer : public AbstractExtentStack {
         }
         return extent_stack->pop_stripe_num_exts(stripe_size);
     }
-    Extent *get_extent_at_closest_key(int key) {
+    Extent *get_extent_at_closest_key(int key) override {
         for (auto &kv : extent_stack->get_extent_stack()) {
             auto rng = std::default_random_engine{};
             std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
@@ -281,7 +285,7 @@ class WholeObjectExtentStack : public AbstractExtentStack {
         return ind;
     }
 
-    void add_extent(stack_val &ext_lst) {
+    void add_extent(stack_val &ext_lst) override {
         int key = ext_lst.size();
         if (this->extent_stack.find(key) != this->extent_stack.end())
             extent_stack.emplace(key, stack_lst());
