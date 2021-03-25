@@ -37,7 +37,7 @@ std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>, shared_ptr<Objec
 	}
     shared_ptr<EventManager> event_mngr = make_shared<EventManager>();
 	shared_ptr<ObjectManager> obj_mngr = make_shared<ObjectManager>(event_mngr, sampler, add_noise);
-    shared_ptr<ExtentManager> ext_mngr = key_fnc == make_shared<ExtentManager>(ext_size, key_fnc);
+    shared_ptr<ExtentManager> ext_mngr = make_shared<ExtentManager>(ext_size, key_fnc);
     return std::make_tuple(stripe_mngr, event_mngr, obj_mngr, ext_mngr);
 
 }
