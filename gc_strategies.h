@@ -2,8 +2,7 @@
 #define __GC_STRATEGIES_H_
 #include "config.h"
 #include "extent_manager.h"
-#include "extent_object.h"
-#include "stripe.h"
+#include "extent_object_stripe.h"
 #include "stripers.h"
 #include "striping_process_coordinator.h"
 #include <algorithm>
@@ -12,10 +11,13 @@
 #include <unordered_map>
 #include <vector>
 #include <cassert>
+
 typedef unordered_map<string, float> ext_type_cost_map;
 typedef unordered_map<string, short> obj_ext_type_map;
 typedef unordered_map<string, short> gc_ext_type_num_map;
 typedef unordered_map<string, int> space_ext_type_map;
+using std::set;
+
 struct gc_handler_ret {
     short reclaimed_space = 0, total_user_reads = 0, total_user_writes = 0,
           total_global_parity_reads = 0, total_global_parity_writes = 0,
@@ -108,14 +110,14 @@ class StripeLevelNoExtsGCStrategy : public GarbageCollectionStrategy {
             valid_objs_per_locality.push_back(0);
         }
         add_num_gc_cycles(1);
-        set<Extent_Object *> objs;
+        set<ExtentObject *> objs;
         set<int> local_parities;
-        list<Extent *> extent_list = stripe->extents;
+        std::list<Extent *> extent_list = stripe->extents;
         space_ext_type_map reclaimed_space_by_ext_types;
         for (Extent *ext : extent_list) {
             assert(ext->get_obsolete_percentage() <= 100);
-            ret.temp_space += ext->obsolete;
-            short valid_objs = ext->ext_size - ext->obsolete;
+            ret.temp_space += ext->obsolete_space;
+            short valid_objs = ext->ext_size - ext->obsolete_space;
             if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
                 ext_types_to_cost[ext->type] += valid_objs * 2;
                 valid_objs_by_ext_type[ext->type] += valid_objs;
@@ -127,15 +129,15 @@ class StripeLevelNoExtsGCStrategy : public GarbageCollectionStrategy {
             }
             if (reclaimed_space_by_ext_types.find(ext->type) !=
                 reclaimed_space_by_ext_types.end()) {
-                reclaimed_space_by_ext_types[ext->type] += ext->obsolete;
+                reclaimed_space_by_ext_types[ext->type] += ext->obsolete_space;
             } else {
-                reclaimed_space_by_ext_types[ext->type] = ext->obsolete;
+                reclaimed_space_by_ext_types[ext->type] = ext->obsolete_space;
             }
             ret.valid_obj_transfers += valid_objs;
             valid_objs_per_locality[ext->locality] += valid_objs;
             striping_process_coordinator->gc_extent(ext, objs);
             exts_per_locality[ext->locality] += 1;
-            obs_data_per_locality[ext->locality] += ext->obsolete;
+            obs_data_per_locality[ext->locality] += ext->obsolete_space;
             if (local_parities.find(ext->locality) != local_parities.end()) {
                 local_parities.insert(ext->locality);
             }
@@ -238,12 +240,12 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
         gc_ext_res(short r, short w) : user_reads(r), user_writes(w) {}
     };
     gc_ext_res gc_ext(Extent *ext, Stripe *stripe) {
-        any key = extent_manager->get_key(ext);
-        Extent *temp_ext =
-            striping_process_coordinator->get_gc_extent(any_cast<int>(key));
+        std::any key = extent_manager->get_key(ext);
+        Extent *temp_ext = striping_process_coordinator->get_gc_extent(
+            std::any_cast<int>(key));
         if (temp_ext == nullptr) {
-            temp_ext =
-                striping_process_coordinator->get_extent(any_cast<int>(key));
+            temp_ext = striping_process_coordinator->get_extent(
+                std::any_cast<int>(key));
         }
 
         stripe->add_extent(temp_ext);
@@ -264,7 +266,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             valid_objs_per_locality.push_back(0);
         }
         add_num_gc_cycles(1);
-        set<Extent_Object *> objs;
+        set<ExtentObject *> objs;
         set<int> local_parities;
         list<Extent *> extent_list = stripe->extents;
         int ext_size = 0;
@@ -272,8 +274,8 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
         for (Extent *ext : extent_list) {
             if (filter_ext(ext)) {
                 assert(ext->get_obsolete_percentage() <= 100);
-                ret.temp_space += ext->obsolete;
-                short valid_objs = ext->ext_size - ext->obsolete;
+                ret.temp_space += ext->obsolete_space;
+                short valid_objs = ext->ext_size - ext->obsolete_space;
                 if (ext_types_to_cost.find(ext->type) !=
                     ext_types_to_cost.end()) {
                     ext_types_to_cost[ext->type] += valid_objs * 2;
@@ -286,15 +288,17 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
                 }
                 if (reclaimed_space_by_ext_types.find(ext->type) !=
                     reclaimed_space_by_ext_types.end()) {
-                    reclaimed_space_by_ext_types[ext->type] += ext->obsolete;
+                    reclaimed_space_by_ext_types[ext->type] +=
+                        ext->obsolete_space;
                 } else {
-                    reclaimed_space_by_ext_types[ext->type] = ext->obsolete;
+                    reclaimed_space_by_ext_types[ext->type] =
+                        ext->obsolete_space;
                 }
                 ret.valid_obj_transfers += valid_objs;
                 valid_objs_per_locality[ext->locality] += valid_objs;
                 striping_process_coordinator->gc_extent(ext, objs);
                 exts_per_locality[ext->locality] += 1;
-                obs_data_per_locality[ext->locality] += ext->obsolete;
+                obs_data_per_locality[ext->locality] += ext->obsolete_space;
                 if (local_parities.find(ext->locality) !=
                     local_parities.end()) {
                     local_parities.insert(ext->locality);
@@ -386,14 +390,14 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
                 valid_objs_per_locality.push_back(0);
             }
             add_num_gc_cycles(1);
-            set<Extent_Object *> objs;
+            set<ExtentObject *> objs;
             list<Extent *> extent_list = stripe->extents;
             space_ext_type_map reclaimed_space_by_ext_types;
             set<int> local_parities;
             for (Extent *ext : extent_list) {
                 assert(ext->get_obsolete_percentage() <= 100);
-                ret.temp_space += ext->obsolete;
-                short valid_objs = ext->ext_size - ext->obsolete;
+                ret.temp_space += ext->obsolete_space;
+                short valid_objs = ext->ext_size - ext->obsolete_space;
                 if (ext_types_to_cost.find(ext->type) !=
                     ext_types_to_cost.end()) {
                     ext_types_to_cost[ext->type] += valid_objs * 2;
@@ -406,15 +410,17 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
                 }
                 if (reclaimed_space_by_ext_types.find(ext->type) !=
                     reclaimed_space_by_ext_types.end()) {
-                    reclaimed_space_by_ext_types[ext->type] += ext->obsolete;
+                    reclaimed_space_by_ext_types[ext->type] +=
+                        ext->obsolete_space;
                 } else {
-                    reclaimed_space_by_ext_types[ext->type] = ext->obsolete;
+                    reclaimed_space_by_ext_types[ext->type] =
+                        ext->obsolete_space;
                 }
                 ret.valid_obj_transfers += valid_objs;
                 valid_objs_per_locality[ext->locality] += valid_objs;
                 striping_process_coordinator->gc_extent(ext, objs);
                 exts_per_locality[ext->locality] += 1;
-                obs_data_per_locality[ext->locality] += ext->obsolete;
+                obs_data_per_locality[ext->locality] += ext->obsolete_space;
                 if (local_parities.find(ext->locality) !=
                     local_parities.end()) {
                     local_parities.insert(ext->locality);

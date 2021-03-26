@@ -1,8 +1,8 @@
 #ifndef __CONFIGS_H_
 #define __CONFIGS_H_
 #include "data_center.h"
-#include "extent.h"
 #include "extent_manager.h"
+#include "extent_object_stripe.h"
 #include "extent_stack.h"
 #include "object_manager.h"
 #include "object_packer.h"
@@ -12,14 +12,22 @@
 #include "striping_process_coordinator.h"
 #include <any>
 #include <memory>
+#include <queue>
+#include <variant>
 
+using std::cout, std::cerr, std::endl;
+using std::make_shared;
+using std::map;
+using std::static_pointer_cast;
+using object_lst = std::vector<obj_record>;
+using obj_pq = std::priority_queue<std::variant<obj_record, obj_pq_record>>;
 // typedef int sim_T;
 inline std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                   shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
 create_managers(const int num_data_exts, const int num_local_parities,
                 const int num_global_parities, const int num_localities,
                 const shared_ptr<SimpleSampler> sampler, const int ext_size,
-                any (Extent::*key_fnc)(), const float coding_overhead = 0,
+                float (Extent::*key_fnc)(), const float coding_overhead = 0,
                 const bool add_noise = false) {
     shared_ptr<StripeManager> stripe_mngr;
     if (coding_overhead != 0) {
@@ -131,15 +139,14 @@ inline DataCenter no_exts_mix_objs_config(
     shared_ptr<AbstractStriperDecorator> gc_striper =
         make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-    object_lst obj_pool = object_lst();
     current_extents current_exts;
     current_exts.emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                           current_exts, num_objs,
                                           primary_threshold, false);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                             current_exts, num_objs,
                                             primary_threshold, false);
     shared_ptr<AbstractExtentStack> extent_stack =
@@ -281,12 +288,12 @@ inline DataCenter age_based_config_no_exts(
     float num_global_parities = 2 / 14;
     float num_local_parities = 2 / 14;
     int num_localities = 1;
-    any (Extent::*key_fnc)() = &Extent::get_timestamp;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
-        mngrs = create_managers(num_data_exts, num_local_parities,
-                                num_global_parities, num_localities, sampler,
-                                ext_size, key_fnc, coding_overhead);
+        mngrs =
+            create_managers(num_data_exts, num_local_parities,
+                            num_global_parities, num_localities, sampler,
+                            ext_size, &Extent::get_timestamp, coding_overhead);
     shared_ptr<StripeManager> stripe_mngr =
         std::get<shared_ptr<StripeManager>>(mngrs);
     shared_ptr<ExtentManager> ext_mngr =
@@ -301,11 +308,11 @@ inline DataCenter age_based_config_no_exts(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
                                           current_extents(), num_objs,
                                           primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
                                             current_extents(), num_objs,
                                             primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
@@ -341,12 +348,11 @@ inline DataCenter age_based_config(
     float num_global_parities = 2;
     float num_local_parities = 2;
     int num_localities = 2;
-    any (Extent::*key_fnc)() = &Extent::get_timestamp;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
         mngrs = create_managers(num_data_exts, num_local_parities,
                                 num_global_parities, num_localities, sampler,
-                                ext_size, key_fnc);
+                                ext_size, &Extent::get_timestamp);
     shared_ptr<StripeManager> stripe_mngr =
         std::get<shared_ptr<StripeManager>>(mngrs);
     shared_ptr<ExtentManager> ext_mngr =
@@ -360,10 +366,10 @@ inline DataCenter age_based_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+        make_shared<AgeBasedObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
                                           current_extents(), num_objs);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
+        make_shared<AgeBasedGCObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
                                             current_extents(), num_objs);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
@@ -477,7 +483,7 @@ DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
         make_shared<SizeBasedObjectPackerSmallerObj>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
-    shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
+    shared_ptr<SimpleObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerSmallerObj>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
@@ -537,7 +543,7 @@ inline DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
         make_shared<SizeBasedObjectPackerDynamicStrategy>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
-    shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
+    shared_ptr<SimpleObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerDynamicStrategy>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
@@ -596,7 +602,7 @@ inline DataCenter size_based_whole_obj_config(
         make_shared<SizeBasedObjectPackerSmallerWholeObjFillGap>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
-    shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
+    shared_ptr<SimpleObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerSmallerWholeObjFillGap>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold, true);
@@ -658,7 +664,7 @@ inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
         make_shared<SizeBasedObjectPackerLargerWholeObj>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold);
-    shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
+    shared_ptr<SimpleObjectPacker> gc_obj_packer =
         make_shared<SizeBasedGCObjectPackerLargerWholeObj>(
             obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
             primary_threshold);
@@ -791,14 +797,13 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-    object_lst obj_pool = object_lst();
     current_extents current_exts;
     current_exts.emplace(0, ext_mngr->create_extent());
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<MixedObjObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                           current_exts, num_objs);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<MixedObjGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                             current_exts, num_objs);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<ExtentStackRandomizer>(
@@ -974,17 +979,15 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
         make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
             make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-
-    object_lst obj_pool = object_lst();
     current_extents current_exts;
     current_exts.emplace(0, ext_mngr->create_extent());
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                             current_exts, num_objs,
                                             primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, obj_pool,
+        make_shared<RandomizedGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                               current_exts, num_objs,
                                               primary_threshold);
 
@@ -1019,12 +1022,12 @@ inline DataCenter age_based_rand_config_no_exts(
     float num_global_parities = 2 / 14;
     float num_local_parities = 2 / 14;
     int num_localities = 1;
-    std::any (Extent::*key_fnc)() = &Extent::get_timestamp;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
-        mngrs = create_managers(num_data_exts, num_local_parities,
-                                num_global_parities, num_localities, sampler,
-                                ext_size, key_fnc, coding_overhead);
+        mngrs =
+            create_managers(num_data_exts, num_local_parities,
+                            num_global_parities, num_localities, sampler,
+                            ext_size, &Extent::get_timestamp, coding_overhead);
     shared_ptr<StripeManager> stripe_mngr =
         std::get<shared_ptr<StripeManager>>(mngrs);
     shared_ptr<ExtentManager> ext_mngr =
@@ -1041,11 +1044,11 @@ inline DataCenter age_based_rand_config_no_exts(
 
     shared_ptr<SimpleObjectPacker> obj_packer =
         make_shared<AgeBasedRandomizedObjectPacker>(
-            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            obj_mngr, ext_mngr, obj_pq(), current_extents(), num_objs,
             primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
         make_shared<AgeBasedRandomizedGCObjectPacker>(
-            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
+            obj_mngr, ext_mngr, obj_pq(), current_extents(), num_objs,
             primary_threshold);
 
     shared_ptr<AbstractExtentStack> extent_stack =
@@ -1081,12 +1084,11 @@ inline DataCenter generational_config(
     float num_global_parities = 2;
     float num_local_parities = 2;
     int num_localities = 2;
-    any (Extent::*key_fnc)() = &Extent::get_generation;
     std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
         mngrs = create_managers(num_data_exts, num_local_parities,
                                 num_global_parities, num_localities, sampler,
-                                ext_size, key_fnc);
+                                ext_size, &Extent::get_generation);
     shared_ptr<StripeManager> stripe_mngr =
         std::get<shared_ptr<StripeManager>>(mngrs);
     shared_ptr<ExtentManager> ext_mngr =
@@ -1102,16 +1104,13 @@ inline DataCenter generational_config(
     shared_ptr<AbstractStriperDecorator> gc_striper = striper;
 
     shared_ptr<SimpleObjectPacker> obj_packer =
-        make_shared<GenerationBasedObjectPacker>(
-            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
-            primary_threshold);
+        make_shared<GenerationBasedObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
+                                                 current_extents(), num_objs,
+                                                 primary_threshold);
     shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-        make_shared<GenerationBasedGCObjectPacker>(
-            obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
-            primary_threshold);
-    object_lst obj_pool = object_lst();
-    current_extents current_exts;
-    current_exts.emplace(0, ext_mngr->create_extent());
+        make_shared<GenerationBasedGCObjectPacker>(obj_mngr, ext_mngr, obj_pq(),
+                                                   current_extents(), num_objs,
+                                                   primary_threshold);
     shared_ptr<AbstractExtentStack> extent_stack =
         make_shared<BestEffortExtentStack>(stripe_mngr);
     shared_ptr<AbstractExtentStack> gc_extent_stack =

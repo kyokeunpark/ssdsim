@@ -1,6 +1,6 @@
 #pragma once
 #include "config.h"
-#include "stripe.h"
+#include "extent_object_stripe.h"
 // get_extents(stripe id) not used anywhere not implemented
 // member variable ext_size_to_stripes not used anywhere not implemented
 // getters not implemented since variables are public

@@ -1,14 +1,16 @@
 #pragma once
-#include "extent.h"
+#include "extent_object_stripe.h"
+#include <any>
 #include <unordered_map>
+
 class ExtentManager {
   public:
     int ext_size;
     list<Extent *> *exts;
-    any (Extent::*key_fnc)();
+    float (Extent::*key_fnc)();
     ExtentManager() {}
-    ExtentManager(int s, any (Extent::*k_f)()) : ext_size(s), key_fnc(k_f) {}
-    any get_key(Extent *ext) { return (ext->*key_fnc)(); }
+    ExtentManager(int s, float (Extent::*k_f)()) : ext_size(s), key_fnc(k_f) {}
+    float get_key(Extent *ext) { return (ext->*key_fnc)(); }
     int get_num_ext() { return exts->size(); }
 
     Extent *create_extent(int s = 0, int secondary_threshold = 15) {

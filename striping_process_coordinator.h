@@ -1,16 +1,17 @@
 #ifndef __STRIPING_PROCESS_COORDINATOR_H_
 #define __STRIPING_PROCESS_COORDINATOR_H_
-#include "extent_object.h"
+#include "extent_object_stripe.h"
 #include "extent_stack.h"
 #include "object_packer.h"
 #include "stripe_manager.h"
 #include "stripers.h"
 #include <any>
 #include <memory>
+using std::cout, std::cerr, std::endl;
 class StripingProcessCoordinator {
   public:
     shared_ptr<SimpleObjectPacker> object_packer;
-    shared_ptr<SimpleGCObjectPacker> gc_object_packer;
+    shared_ptr<SimpleObjectPacker> gc_object_packer;
     shared_ptr<AbstractStriperDecorator> striper;
     shared_ptr<AbstractStriperDecorator> gc_striper;
     shared_ptr<AbstractExtentStack> extent_stack;
@@ -19,7 +20,7 @@ class StripingProcessCoordinator {
     float simulation_time;
     StripingProcessCoordinator() = delete;
     StripingProcessCoordinator(shared_ptr<SimpleObjectPacker> o_p,
-                               shared_ptr<SimpleGCObjectPacker> gc_o_p,
+                               shared_ptr<SimpleObjectPacker> gc_o_p,
                                shared_ptr<AbstractStriperDecorator> s,
                                shared_ptr<AbstractStriperDecorator> gc_s,
                                shared_ptr<AbstractExtentStack> e_s,
@@ -29,7 +30,7 @@ class StripingProcessCoordinator {
           gc_striper(gc_s), extent_stack(e_s), gc_extent_stack(gc_e_s),
           stripe_manager(s_m), simulation_time(s_t) {}
 
-    void gc_extent(Extent *ext, set<Extent_Object *> objs) {
+    void gc_extent(Extent *ext, std::set<ExtentObject *> objs) {
         gc_object_packer->gc_extent(ext, gc_extent_stack, objs);
     }
 

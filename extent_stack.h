@@ -5,7 +5,12 @@
 #include <map>
 #include <memory>
 #include <random>
+
+using std::shared_ptr;
+using std::max;
+using std::min;
 typedef list<Extent *> *extent_stack_ext_lst;
+
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
@@ -28,7 +33,7 @@ using ext_lst_stack = std::map<int, stack_lst>;
 
 class AbstractExtentStack {
   protected:
-    shared_ptr<StripeManager> stripe_manager;
+    std::shared_ptr<StripeManager> stripe_manager;
 
   public:
     AbstractExtentStack() : stripe_manager(nullptr) {}
@@ -37,15 +42,15 @@ class AbstractExtentStack {
 
     virtual int num_stripes(int stripe_size) = 0;
     virtual stack_val pop_stripe_num_exts(int stripe_size) = 0;
-    virtual void add_extent(int key, Extent *ext) = 0;
+    virtual void add_extent(int key, Extent *ext) {};
     virtual int get_length_of_extent_stack() = 0;
     virtual int get_length_at_key(int key) = 0;
     virtual Extent *get_extent_at_key(int key) = 0;
     virtual bool contains_extent(Extent *extent) = 0;
     virtual void remove_extent(Extent *extent) = 0;
-
-    virtual Extent *get_extent_at_closest_key(int key) {
-        return this->get_extent_at_key(key);
+    virtual Extent *get_extent_at_closest_key(int key) { return nullptr; };
+    virtual void add_extent(stack_val &ext_lst) {
+        std::cerr << "extent stack virtual add extent!";
     }
 };
 
@@ -213,8 +218,8 @@ class BestEffortExtentStack : public SingleExtentStack {
 };
 class ExtentStackRandomizer : public AbstractExtentStack {
   public:
-    shared_ptr<SingleExtentStack> extent_stack;
-    ExtentStackRandomizer(shared_ptr<SingleExtentStack> e_s)
+    std::shared_ptr<SingleExtentStack> extent_stack;
+    ExtentStackRandomizer(std::shared_ptr<SingleExtentStack> e_s)
         : extent_stack(e_s) {}
     int num_stripes(int stripe_size) override {
         return extent_stack->num_stripes(stripe_size);
@@ -257,14 +262,14 @@ class ExtentStackRandomizer : public AbstractExtentStack {
     }
 };
 
-class WholeObjectExtentStack : public ExtentStack {
-    using ExtentStack::ExtentStack;
+class WholeObjectExtentStack : public AbstractExtentStack {
+    using AbstractExtentStack::AbstractExtentStack;
 
     ext_lst_stack extent_stack;
 
   public:
     WholeObjectExtentStack(shared_ptr<StripeManager> stripe_manager)
-        : ExtentStack(stripe_manager) {
+        : AbstractExtentStack(stripe_manager) {
         this->extent_stack = ext_lst_stack();
     }
 
@@ -281,7 +286,7 @@ class WholeObjectExtentStack : public ExtentStack {
         return ind;
     }
 
-    void add_extent(stack_val &ext_lst) {
+    void add_extent(stack_val &ext_lst) override {
         int key = ext_lst.size();
         if (this->extent_stack.find(key) != this->extent_stack.end())
             extent_stack.emplace(key, stack_lst());
