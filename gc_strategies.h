@@ -74,6 +74,9 @@ class GarbageCollectionStrategy {
         this->num_localities_in_gc += num;
     }
 
+    gc_ext_type_num_map get_gc_ed_exts_by_type() { return this->gc_ed_exts_by_type; }
+    obj_ext_type_map get_valid_objs_by_ext_type() { return this->valid_objs_by_ext_type; }
+
     // Defines the strategy for gc on a single stripe
     virtual stripe_gc_ret stripe_gc(Stripe *stripe) = 0;
     // Mechanism for determining which stripes are ready for gc
@@ -182,7 +185,7 @@ class StripeLevelNoExtsGCStrategy : public GarbageCollectionStrategy {
             // percentage return?
             double obsolete = stripe->get_obsolete_percentage();
             if (obsolete >= primary_threshold && stripe != nullptr) {
-                printf("%d %d", TIME, stripe->id);
+                printf("%f %d", configtime, stripe->id);
                 stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                 for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
                     string key = kv.first;
@@ -332,7 +335,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             // percentage return?
             double obsolete = stripe->get_obsolete_percentage();
             if (obsolete >= primary_threshold && stripe != nullptr) {
-                printf("%d %d", TIME, stripe->id);
+                printf("%f %d", configtime, stripe->id);
                 stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                 for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
                     string key = kv.first;
@@ -444,7 +447,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
             for (auto stripe : stripe_lst) {
                 double obsolete = stripe->get_obsolete_percentage();
                 if (obsolete >= primary_threshold && stripe != nullptr) {
-                    printf("%d %d", TIME, stripe->id);
+                    printf("%f %d", configtime, stripe->id);
                     stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
                     for (auto &kv :
                          stripe_gc_res.reclaimed_space_by_ext_types) {

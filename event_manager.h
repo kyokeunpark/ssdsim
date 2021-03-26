@@ -7,7 +7,8 @@ using std::priority_queue;
 using std::list;
 
 //im using std tuple
-typedef std::tuple<int,ExtentObject *> event;
+using event = std::tuple<int, ExtentObject*>;
+
 class EventManager{
     public:
         priority_queue<event>* events;

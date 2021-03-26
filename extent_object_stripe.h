@@ -19,6 +19,9 @@ using obj_record = std::pair<ExtentObject *, int>;
 using object_lst = std::vector<obj_record>;
 
 class ExtentObject {
+protected:
+
+
   public:
     int id;
     int size;
@@ -27,13 +30,13 @@ class ExtentObject {
     time_t creation_time;
     int num_times_gced;
     list<Extent_Object_Shard *> *shards;
-    vector<Extent *> extents;
+    list<Extent *> extents;
 
     ExtentObject(int id, int s, float l)
         : id(id), size(s), life(l), generation(0), num_times_gced(0),
           creation_time(time(nullptr)),
           shards(new list<Extent_Object_Shard *>()),
-          extents(vector<Extent *>()) {}
+          extents(list<Extent *>()) {}
 
     ~ExtentObject() { delete shards; }
 
@@ -44,6 +47,15 @@ class ExtentObject {
     double get_age() { return difftime(time(nullptr), creation_time); }
 
     void add_extent(Extent *e) { this->extents.emplace_back(e); }
+    
+    void remove_extent(Extent *e) {
+        for (auto it = this->extents.begin(); it != this->extents.end(); it++) {
+            if (*it == e) {
+                this->extents.erase(it);
+                return;
+            }
+        }
+    }
 
     int get_default_key() { return 0; }
     float get_generation() { return generation; }
@@ -57,6 +69,7 @@ class Extent {
 
     unordered_map<ExtentObject *, list<Extent_Object_Shard *> *> *objects;
     unordered_map<int, vector<int>> obj_ids_to_obj_size;
+    Stripe* stripe;
     int locality;
     int generation;
     time_t timestamp;
@@ -74,19 +87,25 @@ class Extent {
           objects(new unordered_map<ExtentObject *,
                                     list<Extent_Object_Shard *> *>()),
           locality(0), generation(0), timestamp(0), type(0),
-          secondary_threshold(s_t) {}
+          secondary_threshold(s_t), stripe(nullptr) {}
 
     ~Extent() { delete objects; }
 
     double get_age() { return difftime(time(nullptr), timestamp); }
 
-    double get_obj_size(ExtentObject *obj) {
-        double sum = 0;
+    int get_obj_size(ExtentObject *obj) {
+        int sum = 0;
         auto it = objects->find(obj);
         for (Extent_Object_Shard *s : *it->second) {
             sum += s->shard_size;
         }
         return sum;
+    }
+
+    int get_obj_size(int obj_id)
+    {
+        auto shards = this->obj_ids_to_obj_size[obj_id];
+        return std::accumulate(shards.begin(), shards.end(), 0);
     }
 
     double get_obsolete_percentage() { return obsolete_space / ext_size * 100; }

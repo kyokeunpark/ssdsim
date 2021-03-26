@@ -5,8 +5,10 @@
 #include "samplers.h"
 #include <memory>
 #include <random>
+#include <unordered_map>
 
 using std::shared_ptr;
+using std::unordered_map;
 using obj_record = std::pair<ExtentObject *, int>;
 using object_lst = std::vector<obj_record>;
 
@@ -16,13 +18,16 @@ class ObjectManager {
     list<ExtentObject *> *objects;
     shared_ptr<EventManager> event_manager;
     shared_ptr<Sampler> sampler;
+    unordered_map<int, ExtentObject*> ids_to_obj;
     bool add_noise;
+
     ObjectManager() {}
     ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
                   bool a_n = true)
         : objects(new list<ExtentObject *>()), event_manager(e_m), sampler(s),
           add_noise(a_n) {
         // np.random.seed(0)
+        this->ids_to_obj = unordered_map<int, ExtentObject*>();
         max_id = 0;
         srand(0);
     }
@@ -41,13 +46,22 @@ class ObjectManager {
                 noise -= 12;
                 life += noise / 24;
             }
-            life += TIME;
-            ExtentObject *obj = new ExtentObject(max_id++, size, life);
+            life += configtime;
+            ExtentObject *obj = new ExtentObject(max_id, size, life);
             new_objs.emplace_back(std::make_pair(obj, size));
             this->objects->push_back(obj);
+            this->ids_to_obj[max_id] = obj;
+            max_id++;
             event_manager->put_event(life, obj);
         }
         return new_objs;
+    }
+
+    ExtentObject *get_object(int obj_id)
+    {
+        if (this->ids_to_obj.find(obj_id) != this->ids_to_obj.end())
+          return this->ids_to_obj[obj_id];
+        return nullptr;
     }
 
     int get_num_objs() { return objects->size(); }

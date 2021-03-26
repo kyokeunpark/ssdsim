@@ -275,7 +275,7 @@ inline DataCenter stripe_level_with_extents_separate_pools_efficient_config(
     return data_center;
 }
 
-inline float get_timestamp() { return TIME; }
+inline float get_timestamp() { return configtime; }
 
 inline DataCenter age_based_config_no_exts(
     const unsigned long data_center_size, const float striping_cycle,
@@ -336,7 +336,7 @@ inline DataCenter age_based_config_no_exts(
     return data_center;
 }
 
-float get_time() { return TIME; }
+float get_time() { return configtime; }
 
 inline DataCenter age_based_config(
     const unsigned long data_center_size, const float striping_cycle,

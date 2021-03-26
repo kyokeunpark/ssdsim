@@ -117,6 +117,19 @@ class StripingProcessCoordinator {
     void pack_exts(int num_exts, int key = 0) {
         object_packer->generate_exts_at_key(extent_stack, num_exts, key);
     }
+
+    ext_types_mgr get_extent_types()
+    {
+        auto types = this->object_packer->get_ext_types();
+        auto gc_types = this->gc_object_packer->get_ext_types();
+        for (auto it : gc_types) {
+            if (types.find(it.first) != types.end())
+                types[it.first] += it.second;
+            else
+                types[it.first] = it.second;
+        }
+        return types;
+    }
 };
 
 class BestEffortStripingProcessCoordinator : public StripingProcessCoordinator {
