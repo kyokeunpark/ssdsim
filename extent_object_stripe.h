@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iostream>
 #include <list>
+#include <numeric>
 #include <unordered_map>
 #include <vector>
 class Extent;
