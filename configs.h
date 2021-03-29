@@ -10,6 +10,7 @@
 #include "stripe_manager.h"
 #include "stripers.h"
 #include "striping_process_coordinator.h"
+#include "gc_strategies.h"
 #include <any>
 #include <memory>
 #include <queue>
@@ -75,7 +76,7 @@ inline DataCenter stripe_level_with_no_exts_config(
   shared_ptr<AbstractStriperDecorator> striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-  shared_ptr<AbstractStriperDecorator> gc_striper =
+  shared_ptr<StriperWithEC> gc_striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
@@ -93,11 +94,9 @@ inline DataCenter stripe_level_with_no_exts_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /*TODO
-  gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
-  */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  auto gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold,
+                                                 secondary_threshold, ext_mngr,
+                                                 coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -993,10 +992,10 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /*TODO
-gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
-  */
+  // TODO
+  // gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
+  //                                           secondary_threshold, coordinator,
+  //                                           ext_mngr, stripe_mngr, gc_striper)
   shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
@@ -1113,7 +1112,7 @@ inline DataCenter generational_config(
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
-          gc_extent_stack, stripe_mngr, simul_time, get_timestamp)
+          gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
   /*TODO
 gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
 secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)

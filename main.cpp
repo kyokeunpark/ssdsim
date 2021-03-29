@@ -5,13 +5,7 @@
 #include "object_packer.h"
 #include "samplers.h"
 #include "stripers.h"
-using extent_lst = std::vector<int>;
-
-/*
- * TODO: Run the simulator and write out the results to the csv file.
- */
-void run_simulator() {
-}
+using ext_lst = std::vector<int>;
 
 /*
  * Since we can't just evaluate function name like Python, a long switch
@@ -60,20 +54,44 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
   return nullptr;
 }
 
+/*
+ * TODO: Run the simulator and write out the results to the csv file.
+ */
+void run_simulator(const string confname, const ext_lst ext_sizes,
+                   const short primary_threshold, const short secondary_threshold,
+                   const short num_stripes_per_cycle, const float striping_cycle,
+                   const float deletion_cycle, const unsigned long data_center_size,
+                   const float simul_time, SimpleSampler & sampler,
+                   const int total_objs, bool save_to_file=true,
+                   bool record_ext_types=true) {
+  string file_basename = confname;
+  int num_objs_per_cycle = total_objs / simul_time * striping_cycle;
+  auto config = parse_config(confname);
+  shared_ptr<SimpleSampler> samplerptr = make_shared<SimpleSampler>(sampler);
+
+  for (auto ext_size : ext_sizes) {
+    std::cout << "Extent " << ext_size << std::endl;
+    auto dc = config(data_center_size, striping_cycle, simul_time, ext_size,
+                     primary_threshold, secondary_threshold, samplerptr,
+                     num_stripes_per_cycle, deletion_cycle, num_objs_per_cycle);
+    dc.run_simulation();
+  }
+}
+
 int main(int argc, char *argv[]) {
   int ext_size;
   short threshold;
-
-  auto config = randomized_ext_placement_joined_pools_config;
+  string config;
 
   if (argc == 4) {
-    config = parse_config(argv[1]);
+    config = argv[1];
     ext_size = atol(argv[2]);
     threshold = atol(argv[3]);
 
     std::cout << argv[1] << std::endl;
     std::cout << ext_size << ", " << threshold << std::endl;
   } else {
+    config = "stripe_level_with_no_exts_config";
     ext_size = 3 * 1024;
     threshold = 10;
   }
@@ -96,9 +114,13 @@ int main(int argc, char *argv[]) {
   SimpleSampler sampler = DeterministicDistributionSampler(simul_time);
   const short secondary_threshold = threshold;
 
-  extent_lst ext_sizes = {ext_size};
+  ext_lst ext_sizes = {ext_size};
 
   std::cout << threshold << ", " << secondary_threshold << std::endl;
+
+  run_simulator(config, ext_sizes, threshold, secondary_threshold,
+                num_stripes_per_cycle, striping_cycle, deletion_cycle,
+                data_center_size, simul_time, sampler, total_objs);
 
   return 0;
 }
