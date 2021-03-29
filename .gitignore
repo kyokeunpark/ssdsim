@@ -36,3 +36,4 @@
 
 # Cmake build file
 build/
+compile_commands.json

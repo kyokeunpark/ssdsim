@@ -21,7 +21,7 @@ using std::map;
 using std::static_pointer_cast;
 using object_lst = std::vector<obj_record>;
 using obj_pq = std::priority_queue<std::variant<obj_record, obj_pq_record>>;
-// typedef int sim_T;
+
 inline std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
                   shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
 create_managers(const int num_data_exts, const int num_local_parities,
@@ -886,7 +886,7 @@ inline DataCenter randomized_objs_no_exts_config(
     const float simul_time, const int ext_size, const short primary_threshold,
     const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
-    const int num_objs, const int percent_correct) {
+    const int num_objs) {
   int num_data_exts = 1;
   float coding_overhead = 18 / 14;
   float num_global_parities = 2 / 14;
@@ -1011,7 +1011,7 @@ inline DataCenter age_based_rand_config_no_exts(
     const float simul_time, const int ext_size, const short primary_threshold,
     const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
-    const int num_objs, const int percent_correct) {
+    const int num_objs) {
   int num_data_exts = 1;
   float coding_overhead = 18 / 14;
   float num_global_parities = 2 / 14;
@@ -1074,7 +1074,7 @@ inline DataCenter generational_config(
     const float simul_time, const int ext_size, const short primary_threshold,
     const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
-    const int num_objs, const int percent_correct) {
+    const int num_objs) {
   int num_data_exts = 7;
   float num_global_parities = 2;
   float num_local_parities = 2;
@@ -1113,7 +1113,7 @@ inline DataCenter generational_config(
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
-          gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
+          gc_extent_stack, stripe_mngr, simul_time, get_timestamp)
   /*TODO
 gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
 secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
