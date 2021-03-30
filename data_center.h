@@ -84,7 +84,8 @@ struct sim_metric {
 
 class DataCenter {
 
-  int max_size, simul_time, gc_cycle, gced_space;
+  unsigned long max_size;
+  int simul_time, gc_cycle, gced_space;
   float striping_cycle;
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
@@ -172,7 +173,7 @@ public:
         unordered_map<string, int>();
     ExtentObject *next_del_obj = nullptr;
 
-    while (configtime <= this->simul_time && ret.dc_size < this->max_size) {
+    while (configtime <= (int)this->simul_time && ret.dc_size < this->max_size) {
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =
           unordered_map<string, int>();
