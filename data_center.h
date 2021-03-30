@@ -109,7 +109,8 @@ public:
         ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
         gc_strategy(gc_strategy), coordinator(coordinator),
         simul_time(simul_time), gc_cycle(gc_cycle), gced_space(0),
-        obs_by_ext_types(unordered_map<string, int>()) {}
+        obs_by_ext_types(unordered_map<string, int>()), stripe_mngr(stripe_mngr)
+        {}
 
   /*
    * Returns the amount of added obsolete data, a set of stripes affected by
