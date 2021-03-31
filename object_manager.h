@@ -69,4 +69,5 @@ class ObjectManager {
         ids_to_obj.erase(obj->id);
         objects->remove(obj);
     }
+    ~ObjectManager() { delete objects; }
 };
