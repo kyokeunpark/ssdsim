@@ -42,6 +42,13 @@ public:
 
   bool operator<(const ExtentObject &other) { return this->id < other.id; }
 
+  int get_size() {
+    int sum = 0;
+    for (auto shard : *this->shards)
+      sum += shard->shard_size;
+    return sum;
+  }
+
   double get_age() { return difftime(time(nullptr), creation_time); }
 
   void add_extent(Extent *e) { this->extents.emplace_back(e); }

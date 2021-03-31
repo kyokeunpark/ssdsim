@@ -118,16 +118,15 @@ public:
    * the deletion of object with obj_id and a dict mapping extent types
    * to added obsoleted data.
    */
-  del_result del_object(int obj_id) {
+  del_result del_object(ExtentObject * obj) {
     del_result ret;
-    auto obj = this->obj_mngr->get_object(obj_id);
     auto ext_lst = obj->extents;
     std::reverse(ext_lst.begin(), ext_lst.end());
     for (auto ex : ext_lst) {
       obj->remove_extent(ex);
 
       // Size of obj in extent
-      int temp = ex->get_obj_size(obj_id);
+      int temp = obj->get_size();
       this->gced_space += temp;
       ex->del_object(obj);
 
@@ -167,7 +166,6 @@ public:
     double obs_perc = -1;
     double obs_timestamp = -1;
     int next_del_time = this->simul_time + 1;
-    int next_del_obj_id = -1;
     vector<double> obs_percentages = vector<double>();
     unordered_map<string, int> net_obs_by_ext_type =
         unordered_map<string, int>();
@@ -182,7 +180,7 @@ public:
       // Find all candidates for GC
       set<Stripe *> gc_stripes_set = set<Stripe *>();
       while (next_del_time <= configtime && !this->event_mngr->empty()) {
-        del_result dr = this->del_object(next_del_obj_id);
+        del_result dr = this->del_object(next_del_obj);
         gc_stripes_set.insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());
         added_obsolete_this_gc += dr.total_added_obsolete;
@@ -210,7 +208,6 @@ public:
           this->event_mngr->events->pop();
           next_del_time = std::get<0>(e);
           next_del_obj = std::get<1>(e);
-          next_del_obj_id = next_del_obj->id;
         }
       }
       this->event_mngr->put_event(next_del_time, next_del_obj);
@@ -221,8 +218,8 @@ public:
         this->event_mngr->events->pop();
         next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
-        next_del_obj_id = next_del_obj->id;
       }
+
       ret.total_reclaimed_space += gc_ret.reclaimed_space;
       ret.total_exts_gced += gc_ret.total_num_exts_replaced;
       ret.new_obj_reads += gc_ret.total_user_reads;
@@ -279,7 +276,6 @@ public:
         this->event_mngr->events->pop();
         next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
-        next_del_obj_id = next_del_obj->id;
       }
       ret.total_used_space += used_space * this->striping_cycle;
       ret.new_obj_writes += str_result.writes;
