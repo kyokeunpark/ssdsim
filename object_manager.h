@@ -35,7 +35,7 @@ public:
   // docstring and code doesnt match managers.py
   object_lst create_new_object(int num_samples = 1) {
     object_lst new_objs = object_lst();
-    auto size_age_samples = sampler->get_size_age_sample();
+    auto size_age_samples = sampler->get_size_age_sample(num_samples);
     sizes size_samples = size_age_samples.first;
     lives life_samples = size_age_samples.second;
     for (int i = 0; i < size_samples.size(); i++) {
