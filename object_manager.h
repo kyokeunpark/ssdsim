@@ -13,61 +13,61 @@ using obj_record = std::pair<ExtentObject *, int>;
 using object_lst = std::vector<obj_record>;
 
 class ObjectManager {
-  public:
-    int max_id;
-    list<ExtentObject *> *objects;
-    shared_ptr<EventManager> event_manager;
-    shared_ptr<Sampler> sampler;
-    unordered_map<int, ExtentObject *> ids_to_obj;
-    bool add_noise;
+public:
+  int max_id;
+  list<ExtentObject *> *objects;
+  shared_ptr<EventManager> event_manager;
+  shared_ptr<Sampler> sampler;
+  unordered_map<int, ExtentObject *> ids_to_obj;
+  bool add_noise;
 
-    ObjectManager() {}
-    ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
-                  bool a_n = true)
-        : objects(new list<ExtentObject *>()), event_manager(e_m), sampler(s),
-          add_noise(a_n) {
-        // np.random.seed(0)
-        this->ids_to_obj = unordered_map<int, ExtentObject *>();
-        max_id = 0;
-        srand(0);
+  ObjectManager() {}
+  ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
+                bool a_n = true)
+      : objects(new list<ExtentObject *>()), event_manager(e_m), sampler(s),
+        add_noise(a_n) {
+    // np.random.seed(0)
+    this->ids_to_obj = unordered_map<int, ExtentObject *>();
+    max_id = 0;
+    srand(0);
+  }
+
+  // docstring and code doesnt match managers.py
+  object_lst create_new_object(int num_samples = 1) {
+    object_lst new_objs = object_lst();
+    auto size_age_samples = sampler->get_size_age_sample(num_samples);
+    sizes size_samples = size_age_samples.first;
+    lives life_samples = size_age_samples.second;
+    for (int i = 0; i < size_samples.size(); i++) {
+      int size = size_samples[i];
+      int life = life_samples[i];
+      int noise = rand() % 25;
+      if (add_noise) {
+        noise -= 12;
+        life += noise / 24;
+      }
+      life += configtime;
+      ExtentObject *obj = new ExtentObject(max_id, size, life);
+      new_objs.emplace_back(std::make_pair(obj, size));
+      this->objects->push_back(obj);
+      this->ids_to_obj[max_id] = obj;
+      max_id++;
+      event_manager->put_event(life, obj);
     }
+    return new_objs;
+  }
 
-    // docstring and code doesnt match managers.py
-    object_lst create_new_object(int num_samples = 1) {
-        object_lst new_objs = object_lst();
-        auto size_age_samples = sampler->get_size_age_sample(num_samples);
-        sizes size_samples = size_age_samples.first;
-        lives life_samples = size_age_samples.second;
-        for (int i = 0; i < size_samples.size(); i++) {
-            int size = size_samples[i];
-            int life = life_samples[i];
-            int noise = rand() % 25;
-            if (add_noise) {
-                noise -= 12;
-                life += noise / 24;
-            }
-            life += configtime;
-            ExtentObject *obj = new ExtentObject(max_id, size, life);
-            new_objs.emplace_back(std::make_pair(obj, size));
-            this->objects->push_back(obj);
-            this->ids_to_obj[max_id] = obj;
-            max_id++;
-            event_manager->put_event(life, obj);
-        }
-        return new_objs;
-    }
+  ExtentObject *get_object(int obj_id) {
+    if (this->ids_to_obj.find(obj_id) != this->ids_to_obj.end())
+      return this->ids_to_obj[obj_id];
+    return nullptr;
+  }
 
-    ExtentObject *get_object(int obj_id) {
-        if (this->ids_to_obj.find(obj_id) != this->ids_to_obj.end())
-            return this->ids_to_obj[obj_id];
-        return nullptr;
-    }
+  int get_num_objs() { return objects->size(); }
 
-    int get_num_objs() { return objects->size(); }
-
-    void remove_object(ExtentObject *obj) {
-        ids_to_obj.erase(obj->id);
-        objects->remove(obj);
-    }
-    ~ObjectManager() { delete objects; }
+  void remove_object(ExtentObject *obj) {
+    ids_to_obj.erase(obj->id);
+    objects->remove(obj);
+  }
+  ~ObjectManager() { delete objects; }
 };
