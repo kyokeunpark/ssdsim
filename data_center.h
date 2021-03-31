@@ -175,8 +175,10 @@ public:
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =
           unordered_map<string, int>();
+
       for (auto it : this->obs_by_ext_types)
         added_obsolete_by_type[it.first] = 0;
+
       // Find all candidates for GC
       set<Stripe *> gc_stripes_set = set<Stripe *>();
       while (next_del_time <= configtime && !this->event_mngr->empty()) {

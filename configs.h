@@ -54,10 +54,11 @@ inline DataCenter stripe_level_with_no_exts_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14.0;
+  float num_global_parities = 2.0 / 14.0;
+  float num_local_parities = 2.0 / 14.0;
   int num_localities = 1;
+  std::cout << coding_overhead << " " << num_global_parities << std::endl;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
       mngrs = create_managers(num_data_exts, num_local_parities,
