@@ -582,8 +582,8 @@ TEST(Striper, SimpleStriperCreateStripeWithMultiExtentStack) {
   }
   auto costs = striper->create_stripes(e_s, 365.0);
   EXPECT_EQ(costs.stripes, 1);
-  EXPECT_EQ(costs.reads, 91);
-  EXPECT_EQ(costs.writes, 91);
+  EXPECT_EQ(costs.reads, 105);
+  EXPECT_EQ(costs.writes, 105);
 }
   
 
