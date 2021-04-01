@@ -8,18 +8,15 @@ using std::priority_queue;
 
 // im using std tuple
 using event = std::tuple<float, ExtentObject *>;
+using e_queue = std::priority_queue<event, std::vector<event>, std::greater<event>>;
 
 class EventManager {
 public:
-  priority_queue<event> *events;
+  e_queue *events;
 
-  EventManager() : events(new priority_queue<event>()) {}
+  EventManager() : events(new e_queue()) {}
 
   void put_event(float life, ExtentObject *obj) {
-    std::cout << life;
-    if (obj)
-      std::cout << ", " << obj->id;
-    std::cout << std::endl;
     events->emplace(event(life, obj));
   }
 

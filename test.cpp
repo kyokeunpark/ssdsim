@@ -3,6 +3,7 @@
 #include "extent_stack.h"
 #include "stripe_manager.h"
 #include "stripers.h"
+#include "gc_strategies.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <memory>

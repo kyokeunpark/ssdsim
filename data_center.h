@@ -85,9 +85,9 @@ struct sim_metric {
 class DataCenter {
 
   unsigned long max_size;
-  int gc_cycle, gced_space;
+  int gced_space;
   float simul_time;
-  float striping_cycle;
+  float striping_cycle, gc_cycle;
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
   shared_ptr<ExtentManager> ext_mngr;
@@ -106,7 +106,7 @@ public:
              shared_ptr<EventManager> event_mngr,
              shared_ptr<GarbageCollectionStrategy> gc_strategy,
              shared_ptr<StripingProcessCoordinator> coordinator, float simul_time,
-             int gc_cycle)
+             float gc_cycle)
       : max_size(max_size), striping_cycle(striping_cycle), striper(striper),
         ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
         gc_strategy(gc_strategy), coordinator(coordinator),
@@ -160,13 +160,13 @@ public:
    */
   eh_result event_handler() {
     eh_result ret;
-    configtime = 0;
+    configtime = 0.0;
     int net_obsolete = 0;
     int used_space = 0;
-    double daily_max_perc = 0;
-    double obs_perc = -1;
-    double obs_timestamp = -1;
-    float next_del_time = this->simul_time + 1;
+    double daily_max_perc = 0.0;
+    double obs_perc = -1.0;
+    double obs_timestamp = -1.0;
+    float next_del_time = this->simul_time + 1.0;
     vector<double> obs_percentages = vector<double>();
     unordered_map<string, int> net_obs_by_ext_type =
         unordered_map<string, int>();

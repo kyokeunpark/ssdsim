@@ -240,7 +240,7 @@ public:
    * corresponding key for each object in current_extents and calls
    * add_obj_to_current_ext_at_key.
    */
-  virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack){};
+  // virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack){};
   // TODO: extent_stack might need to be a pointer here
 };
 
@@ -262,8 +262,8 @@ public:
     while (obj_pool->size() > 0) {
       obj_record obj = obj_pool->back();
       obj_pool->pop_back();
-      this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second,
-                                          key);
+      this->add_obj_to_current_ext_at_key(extent_stack, obj.first,
+                                          obj.second, key);
     }
   };
   virtual void
@@ -292,7 +292,7 @@ public:
    */
   virtual void
   gc_extent(Extent *ext, shared_ptr<AbstractExtentStack> extent_stack,
-            std::set<ExtentObject *> objs = std::set<ExtentObject *>()) {
+            std::set<ExtentObject *> objs = std::set<ExtentObject *>()) override {
     for (ExtentObject *obj : objs) {
       this->add_obj(obj_record(obj, ext->get_obj_size(obj)));
     }
