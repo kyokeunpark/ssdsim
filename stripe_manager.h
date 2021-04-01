@@ -19,12 +19,13 @@ public:
 
   StripeManager(int num_data_extents, float num_local_parities,
                 float num_global_parities, int num_localities_in_stripe,
-                float coding_overhead)
+                float coding_overhead = 0)
       : stripes(new list<Stripe *>()),
         num_data_exts_per_locality(num_data_extents),
         num_local_parities(num_local_parities),
         num_global_parities(num_global_parities),
-        num_localities_in_stripe(num_localities_in_stripe), max_id(0) {
+        num_localities_in_stripe(num_localities_in_stripe), max_id(1) {
+
     num_exts_per_stripe =
         num_data_exts_per_locality * num_localities_in_stripe +
         num_local_parities + num_global_parities;

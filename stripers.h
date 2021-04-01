@@ -140,19 +140,14 @@ public:
     str_costs total = {0};
     while (extent_stack->num_stripes(num_exts))
       total += striper->create_stripes(extent_stack, simulation_time);
-    total.stripes += 1;
     return total;
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
                           float simulation_time) override {
-    int num_exts = stripe_manager->num_data_exts_per_stripe;
-    str_costs total = {0};
-    if (extent_stack->num_stripes(num_exts))
-      total += striper->create_stripes(extent_stack, simulation_time);
-    total.stripes += 1;
-    return total;
+    return this->create_stripes(extent_stack, simulation_time);
   }
+
   repl_costs cost_to_replace_extents(int ext_size, int exts_per_locality,
                                      double obs_data_per_locality) override {
     return striper->cost_to_replace_extents(ext_size, exts_per_locality,
@@ -172,7 +167,7 @@ public:
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                            float simulation_time) override {
     str_costs total = {0};
-    for (int i = 0; i < num_stripes_per_cycle; i++)
+    for (int i = 0; i < this->num_stripes_per_cycle; i++)
       total += striper->create_stripes(extent_stack, simulation_time);
     return total;
   }

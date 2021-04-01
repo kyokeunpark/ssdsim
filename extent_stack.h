@@ -74,7 +74,7 @@ public:
     if (this->extent_stack.find(key) == this->extent_stack.end())
       this->extent_stack.emplace(key, stack_val());
     this->extent_stack[key].push_back(ext);
-    }
+  }
 
   virtual int get_length_of_extent_stack() override {
     int length = 0;
@@ -154,6 +154,15 @@ public:
     if (this->get_length_of_extent_stack() < num_left_to_add) {
       return ret;
     }
+    /*
+     * NOTE: This produces slightly different result compared to original code.
+     *       This is because the original code sorts the extents by key
+     *       (in reverse order). Since we are not using standard integer
+     *       keys to identify each extents, this is not possible.
+     *
+     *       In practice, this seems to alter some of the read and write
+     *       results slightly, but not by much.
+     */
     auto it = this->extent_stack.begin();
     while (it != this->extent_stack.end()) {
       for (int i = 0;

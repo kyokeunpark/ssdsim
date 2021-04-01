@@ -73,6 +73,16 @@ TEST(ObjectManagerTest, DeleteObject) {
 /****************************************
  * StripeManager
  ****************************************/
+TEST(StripeManagerTest, StripeManagerInit) {
+  StripeManager s_m = StripeManager(7, 2, 2, 2);
+  EXPECT_EQ(s_m.num_data_exts_per_locality, 7);
+  EXPECT_EQ(s_m.num_local_parities, 2);
+  EXPECT_EQ(s_m.num_global_parities, 2);
+  EXPECT_EQ(s_m.num_localities_in_stripe, 2);
+  EXPECT_EQ(s_m.num_exts_per_stripe, 18);
+  EXPECT_EQ(s_m.num_data_exts_per_stripe, 14);
+}
+
 TEST(StripeManagerTest, GetDataDcSizeANDGetTotalDataDcSize) {
   StripeManager s_m = StripeManager(7, 2, 2, 2, 0.0);
   s_m.create_new_stripe(5);
@@ -550,7 +560,7 @@ TEST(ExtentStack, WholeObjectExtentStackContainsRemoveExtent) {
 /****************************************
  * Striper
  ****************************************/
-TEST(Striper, SimpleStriperCreateStripeWithSingleExtentStack) {
+TEST(StriperTest, SimpleStriperCreateStripeWithSingleExtentStack) {
   int ext_size = 3*1024;
   auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
   auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
@@ -567,7 +577,7 @@ TEST(Striper, SimpleStriperCreateStripeWithSingleExtentStack) {
   EXPECT_EQ(costs.writes, 735);
 }
 
-TEST(Striper, SimpleStriperCreateStripeWithMultiExtentStack) {
+TEST(StriperTest, SimpleStriperCreateStripeWithMultiExtentStack) {
   int ext_size = 3*1024;
   auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
   auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
@@ -585,7 +595,75 @@ TEST(Striper, SimpleStriperCreateStripeWithMultiExtentStack) {
   EXPECT_EQ(costs.reads, 105);
   EXPECT_EQ(costs.writes, 105);
 }
-  
+
+TEST(StriperTest, SimpleStriperCreateStripeWithMultiExtentStack2) {
+  int ext_size = 3*1024;
+  stripe_costs total = {0};
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<MultiExtentStack>(s_m);
+  auto striper = make_shared<SimpleStriper>(s_m, e_m);
+  for (int i = 0; i < 4; i++) {
+    for (int j = 1; j < 60; j++) {
+      auto e = e_m->create_extent(j);
+      e->timestamp = 123;
+      e_s->add_extent(i, e);
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    auto costs = striper->create_stripes(e_s, 365.0);
+    total += costs;
+  }
+  EXPECT_EQ(total.stripes, 3);
+  EXPECT_EQ(total.reads, 903);
+  EXPECT_EQ(total.writes, 903);
+}
+
+TEST(StriperTest, ExtentStackStriperWithSimpleExtentStack) {
+  int ext_size = 3*1024;
+  stripe_costs total = {0};
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<SingleExtentStack<>>(s_m);
+  auto striper = make_shared<ExtentStackStriper>(make_shared<SimpleStriper>(s_m, e_m));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 1; j < 60; j++) {
+      auto e = e_m->create_extent(j);
+      e->timestamp = 123;
+      e_s->add_extent(i, e);
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    auto costs = striper->create_stripes(e_s, 365.0);
+    total += costs;
+  }
+  EXPECT_EQ(total.stripes, 16);
+  EXPECT_EQ(total.reads, 6438);
+  EXPECT_EQ(total.writes, 6438);
+}
+
+TEST(StriperTest, NumStripesStriperWithSimpleExtentStack) {
+  int ext_size = 3*1024;
+  str_costs total = {0};
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<MultiExtentStack>(s_m);
+  auto striper = make_shared<NumStripesStriper>(2, make_shared<SimpleStriper>(s_m, e_m));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 1; j < 60; j++) {
+      auto e = e_m->create_extent(j);
+      e->timestamp = 123;
+      e_s->add_extent(i, e);
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    auto costs = striper->create_stripes(e_s, 365.0);
+    total += costs;
+  }
+  EXPECT_EQ(total.stripes, 6);
+  EXPECT_EQ(total.reads, 2002);
+  EXPECT_EQ(total.writes, 2002);
+}
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
