@@ -1,8 +1,10 @@
 #include "configs.h"
 #include "extent_manager.h"
 #include "stripe_manager.h"
+#include "stripers.h"
 #include "gtest/gtest.h"
 #include <iostream>
+#include <memory>
 
 TEST(SamplerTest, SanityCheckSampler1Value) {
   SanityCheckSampler1 sampler = SanityCheckSampler1(5, 5);
@@ -130,6 +132,95 @@ TEST(ExtentManagerTest, GetExtTypes) {
   EXPECT_EQ(types.size(), 2);
   EXPECT_EQ(types["small"], 2);
   EXPECT_EQ(types["large"], 1);
+};
+
+
+TEST(ExtentStack, AddExtentGetLengthOfExtentStack) {
+  int ext_size = 3*1024;
+  std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+    std::shared_ptr<SingleExtentStack> e_s = make_shared<SingleExtentStack>(s_m);
+    ExtentManager e_m = ExtentManager(ext_size, nullptr);
+    Extent *e1 = e_m.create_extent(5);
+    Extent *e2 = e_m.create_extent(10);
+    Extent *e3 = e_m.create_extent(15);
+  e_s->add_extent(1,e1);
+  e_s->add_extent(2,e2);
+  e_s->add_extent(2,e3);
+  EXPECT_EQ(e_s->get_length_of_extent_stack(), 3);
+
+};
+
+TEST(ExtentStack, AddExtentGetLengthAtKey) {
+  int ext_size = 3*1024;
+  std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+    std::shared_ptr<SingleExtentStack> e_s = make_shared<SingleExtentStack>(s_m);
+    ExtentManager e_m = ExtentManager(ext_size, nullptr);
+    Extent *e1 = e_m.create_extent(5);
+    Extent *e2 = e_m.create_extent(10);
+    Extent *e3 = e_m.create_extent(15);
+  e_s->add_extent(1,e1);
+  e_s->add_extent(2,e2);
+  e_s->add_extent(2,e3);
+  EXPECT_EQ(e_s->get_length_at_key(2), 2);
+
+};
+
+TEST(ExtentStack, GetExtentAtKey) {
+  int ext_size = 3*1024;
+  std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+    std::shared_ptr<SingleExtentStack> e_s = make_shared<SingleExtentStack>(s_m);
+    ExtentManager e_m = ExtentManager(ext_size, nullptr);
+    Extent *e1 = e_m.create_extent(5);
+    Extent *e2 = e_m.create_extent(10);
+    Extent *e3 = e_m.create_extent(15);
+    Extent *e4 = e_m.create_extent(12);
+  e_s->add_extent(1,e1);
+  e_s->add_extent(2,e2);
+  e_s->add_extent(2,e3);
+  EXPECT_EQ(e_s->get_extent_at_key(1), e1);
+  EXPECT_EQ(e_s->get_extent_at_key(2), e2);
+  EXPECT_EQ(e_s->get_extent_at_key(2), e3);
+  EXPECT_EQ(e_s->get_extent_at_key(2), nullptr);
+  EXPECT_EQ(e_s->get_length_of_extent_stack(), 0);
+  EXPECT_EQ(e_s->get_length_at_key(2), 0);
+};
+
+TEST(ExtentStack, ContainsExtent) {
+  int ext_size = 3*1024;
+  std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+    std::shared_ptr<SingleExtentStack> e_s = make_shared<SingleExtentStack>(s_m);
+    ExtentManager e_m = ExtentManager(ext_size, nullptr);
+    Extent *e1 = e_m.create_extent(5);
+    Extent *e2 = e_m.create_extent(10);
+    Extent *e3 = e_m.create_extent(15);
+    Extent *e4 = e_m.create_extent(12);
+  e_s->add_extent(1,e1);
+  e_s->add_extent(2,e2);
+  e_s->add_extent(2,e3);
+  EXPECT_EQ(e_s->contains_extent(e1), true);
+  EXPECT_EQ(e_s->contains_extent(e4), false);
+  EXPECT_EQ(e_s->contains_extent(nullptr), false);
+};
+
+TEST(ExtentStack, RemoveExtent) {
+  int ext_size = 3*1024;
+  std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+    std::shared_ptr<SingleExtentStack> e_s = make_shared<SingleExtentStack>(s_m);
+    ExtentManager e_m = ExtentManager(ext_size, nullptr);
+    Extent *e1 = e_m.create_extent(5);
+    Extent *e2 = e_m.create_extent(10);
+    Extent *e3 = e_m.create_extent(15);
+  e_s->add_extent(1,e1);
+  e_s->add_extent(2,e2);
+  e_s->add_extent(2,e3);
+  EXPECT_EQ(e_s->contains_extent(e1), true);
+  e_s->remove_extent(e1);
+  EXPECT_EQ(e_s->contains_extent(e1), false);
+  EXPECT_EQ(e_s->contains_extent(e2), true);
+  EXPECT_EQ(e_s->contains_extent(e3), true);
+  EXPECT_EQ(e_s->get_length_of_extent_stack(), 2);
+  EXPECT_EQ(e_s->get_length_at_key(1), 0);
+  EXPECT_EQ(e_s->get_length_at_key(2), 2);
 };
 
 int main(int argc, char **argv) {
