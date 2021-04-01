@@ -8,8 +8,6 @@ public:
   int ext_size;
   list<Extent *> exts;
   float (Extent::*key_fnc)();
-
-  ExtentManager() {}
   ExtentManager(int s, float (Extent::*k_f)())
       : ext_size(s), key_fnc(k_f), exts(list<Extent *>()) {}
 
@@ -31,8 +29,10 @@ public:
   unordered_map<string, int> get_ext_types() {
     unordered_map<string, int> ret;
     for (Extent *e : exts) {
-      ret.emplace(e->type, 0);
-      ret[e->type] += 1;
+      if (e->type.compare("0") != 0) {
+        ret.emplace(e->type, 0);
+        ret[e->type] += 1;
+      }
     }
     return ret;
   }

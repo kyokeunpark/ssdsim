@@ -69,10 +69,10 @@ public:
   virtual stack_val pop_stripe_num_exts(int stripe_size) override = 0;
 
   void add_extent(int key, Extent *ext) override {
-    if (this->extent_stack.find(key) != this->extent_stack.end())
+    if (this->extent_stack.find(key) == this->extent_stack.end())
       this->extent_stack.emplace(key, stack_val());
     this->extent_stack[key].push_back(ext);
-  }
+    }
 
   virtual int get_length_of_extent_stack() override {
     int length = 0;
@@ -99,11 +99,12 @@ public:
   virtual Extent *get_extent_at_key(int key) override {
     if (extent_stack.find(key) == extent_stack.end())
       return nullptr;
-    stack_val exts = this->extent_stack[key];
-    Extent *ret = exts.front();
-    exts.pop_front();
-    if (exts.size() == 0)
+    stack_val * exts = &this->extent_stack[key];
+    Extent *ret = exts->front();
+    exts->pop_front();
+    if (exts->size() == 0)
       extent_stack.erase(key);
+    
     return ret;
   }
 

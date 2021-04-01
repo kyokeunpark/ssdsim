@@ -65,5 +65,9 @@ public:
 
   int get_num_objs() { return objects->size(); }
 
-  void remove_object(ExtentObject *obj) { objects->remove(obj); }
+  void remove_object(ExtentObject *obj) {
+    ids_to_obj.erase(obj->id);
+    objects->remove(obj);
+  }
+  ~ObjectManager() { delete objects; }
 };

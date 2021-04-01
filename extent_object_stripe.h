@@ -1,7 +1,6 @@
 #pragma once
 
 #include "extent_object_shard.h"
-#include <any>
 #include <ctime>
 #include <iostream>
 #include <list>
@@ -72,12 +71,12 @@ public:
   double free_space;
   double ext_size;
 
-  unordered_map<ExtentObject *, list<Extent_Object_Shard *> *> *objects;
+  unordered_map<ExtentObject *, list<Extent_Object_Shard *>> *objects;
   unordered_map<int, vector<int>> obj_ids_to_obj_size;
   Stripe *stripe;
   int locality;
   int generation;
-  time_t timestamp;
+  float timestamp;
   string type;
   int secondary_threshold;
 
@@ -87,11 +86,11 @@ public:
 
   float get_generation() { return generation; }
 
-  Extent(int e_s, int s_t)
+  Extent(double e_s, int s_t)
       : obsolete_space(0), free_space(e_s), ext_size(e_s),
         objects(
-            new unordered_map<ExtentObject *, list<Extent_Object_Shard *> *>()),
-        locality(0), generation(0), timestamp(0), type(0),
+            new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>()),
+        locality(0), generation(0), timestamp(0), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
   ~Extent() { delete objects; }
@@ -101,7 +100,7 @@ public:
   int get_obj_size(ExtentObject *obj) {
     int sum = 0;
     auto it = objects->find(obj);
-    for (Extent_Object_Shard *s : *it->second) {
+    for (Extent_Object_Shard *s : it->second) {
       sum += s->shard_size;
     }
     return sum;
@@ -135,8 +134,8 @@ public:
       Extent_Object_Shard *new_shard = new Extent_Object_Shard(size);
       obj->shards->push_back(new_shard);
       this->objects->emplace(
-          std::make_pair(obj, new list<Extent_Object_Shard *>()));
-      this->objects->find(obj)->second->push_back(new_shard);
+          std::make_pair(obj, list<Extent_Object_Shard *>()));
+      this->objects->find(obj)->second.push_back(new_shard);
     }
     free_space -= temp_size;
     return temp_size;
@@ -150,7 +149,7 @@ public:
   double del_object(ExtentObject *obj) {
     double sum = 0;
     auto it = objects->find(obj);
-    for (Extent_Object_Shard *s : *it->second) {
+    for (Extent_Object_Shard *s : it->second) {
       sum += s->shard_size;
     }
     obsolete_space += sum;
@@ -165,14 +164,13 @@ public:
 
     for (auto &it : *objects) {
       int sum = 0;
-      for (Extent_Object_Shard *s : *it.second) {
+      for (Extent_Object_Shard *s : it.second) {
         sum += s->shard_size;
         ret.push_back(std::make_pair(it.first, sum));
       }
     }
     delete objects;
-    objects =
-        new unordered_map<ExtentObject *, list<Extent_Object_Shard *> *>();
+    objects = new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>();
     generation = 0;
     free_space = ext_size;
     return ret;

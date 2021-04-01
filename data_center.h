@@ -110,15 +110,15 @@ public:
         ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
         gc_strategy(gc_strategy), coordinator(coordinator),
         simul_time(simul_time), gc_cycle(gc_cycle), gced_space(0),
-        obs_by_ext_types(unordered_map<string, int>()), stripe_mngr(stripe_mngr)
-        {}
+        obs_by_ext_types(unordered_map<string, int>()),
+        stripe_mngr(stripe_mngr) {}
 
   /*
    * Returns the amount of added obsolete data, a set of stripes affected by
    * the deletion of object with obj_id and a dict mapping extent types
    * to added obsoleted data.
    */
-  del_result del_object(ExtentObject * obj) {
+  del_result del_object(ExtentObject *obj) {
     del_result ret;
     auto ext_lst = obj->extents;
     std::reverse(ext_lst.begin(), ext_lst.end());
@@ -171,7 +171,8 @@ public:
         unordered_map<string, int>();
     ExtentObject *next_del_obj = nullptr;
 
-    while (configtime <= (int)this->simul_time && ret.dc_size < this->max_size) {
+    while (configtime <= (int)this->simul_time &&
+           ret.dc_size < this->max_size) {
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =
           unordered_map<string, int>();

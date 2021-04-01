@@ -12,17 +12,19 @@ using ext_lst = std::vector<int>;
  * statement to parse the input string is necessary.
  */
 DataCenter (*parse_config(string confname))(const unsigned long, const float,
-                                         const float, const int, const short,
-                                         const short, shared_ptr<SimpleSampler>,
-                                         const short, const float, const int)
-{
+                                            const float, const int, const short,
+                                            const short,
+                                            shared_ptr<SimpleSampler>,
+                                            const short, const float,
+                                            const int) {
   // Baseline
   if (confname == "stripe_level_with_no_exts_config")
     return stripe_level_with_no_exts_config;
   // Cross-extent erasure coding
   else if (confname == "stripe_level_with_extents_separate_pools_config")
     return stripe_level_with_extents_separate_pools_config;
-  else if (confname == "stripe_level_with_extents_separate_pools_efficient_config")
+  else if (confname ==
+           "stripe_level_with_extents_separate_pools_efficient_config")
     return stripe_level_with_extents_separate_pools_efficient_config;
   // Placement strategies
   else if (confname == "age_based_config")
@@ -31,11 +33,13 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
     return generational_config;
   else if (confname == "size_based_stripe_level_no_exts_baseline_config")
     return size_based_stripe_level_no_exts_baseline_config;
-  else if (confname == "size_based_stripe_level_no_exts_larger_whole_obj_config")
+  else if (confname ==
+           "size_based_stripe_level_no_exts_larger_whole_obj_config")
     return size_based_stripe_level_no_exts_larger_whole_obj_config;
   else if (confname == "size_based_stripe_level_no_exts_smaller_obj_config")
     return size_based_stripe_level_no_exts_smaller_obj_config;
-  else if (confname == "size_based_stripe_level_no_exts_dynamic_strategy_config")
+  else if (confname ==
+           "size_based_stripe_level_no_exts_dynamic_strategy_config")
     return size_based_stripe_level_no_exts_dynamic_strategy_config;
   else if (confname == "size_based_whole_obj_config")
     return size_based_whole_obj_config;
@@ -58,12 +62,13 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
  * TODO: Run the simulator and write out the results to the csv file.
  */
 void run_simulator(const string confname, const ext_lst ext_sizes,
-                   const short primary_threshold, const short secondary_threshold,
-                   const short num_stripes_per_cycle, const float striping_cycle,
-                   const float deletion_cycle, const unsigned long data_center_size,
-                   const float simul_time, SimpleSampler & sampler,
-                   const int total_objs, bool save_to_file=true,
-                   bool record_ext_types=true) {
+                   const short primary_threshold,
+                   const short secondary_threshold,
+                   const short num_stripes_per_cycle,
+                   const float striping_cycle, const float deletion_cycle,
+                   const unsigned long data_center_size, const float simul_time,
+                   SimpleSampler &sampler, const int total_objs,
+                   bool save_to_file = true, bool record_ext_types = true) {
   string file_basename = confname;
   int num_objs_per_cycle = total_objs / simul_time * striping_cycle;
   auto config = parse_config(confname);
