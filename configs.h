@@ -88,9 +88,9 @@ inline DataCenter stripe_level_with_no_exts_config(
                                         current_extents(), num_objs,
                                         primary_threshold, true);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
@@ -148,7 +148,7 @@ inline DataCenter no_exts_mix_objs_config(
                                           current_exts, num_objs,
                                           primary_threshold, false);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
@@ -203,7 +203,7 @@ inline DataCenter stripe_level_with_extents_separate_pools_config(
                                         current_extents(), num_objs,
                                         primary_threshold, false);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
@@ -255,7 +255,7 @@ inline DataCenter stripe_level_with_extents_separate_pools_efficient_config(
       make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, object_lst(),
                                         current_extents(), num_objs);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
@@ -425,9 +425,9 @@ inline DataCenter size_based_stripe_level_no_exts_baseline_config(
           obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
           primary_threshold);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
@@ -484,9 +484,9 @@ DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
           obj_mngr, ext_mngr, object_lst(), current_extents(), num_objs,
           primary_threshold, true);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
@@ -802,7 +802,7 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
                                           current_exts, num_objs);
   shared_ptr<AbstractExtentStack> extent_stack =
       make_shared<ExtentStackRandomizer>(
-          make_shared<SingleExtentStack>(stripe_mngr));
+          make_shared<SingleExtentStack<>>(stripe_mngr));
   shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
@@ -858,9 +858,9 @@ inline DataCenter randomized_obj_placement_joined_pools_config(
                                             current_extents(), num_objs,
                                             primary_threshold);
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
@@ -987,7 +987,7 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
                                             primary_threshold);
 
   shared_ptr<AbstractExtentStack> extent_stack =
-      make_shared<SingleExtentStack>(stripe_mngr);
+      make_shared<SingleExtentStack<>>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack = extent_stack;
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(

@@ -1,7 +1,7 @@
 #pragma once
 #include "stripe_manager.h"
 #include <algorithm>
-#include <list>
+#include <functional>
 #include <map>
 #include <memory>
 #include <random>
@@ -9,7 +9,7 @@
 using std::max;
 using std::min;
 using std::shared_ptr;
-typedef list<Extent *> *extent_stack_ext_lst;
+typedef vector<Extent *> *extent_stack_ext_lst;
 
 /*
  * Struct used to check if a pointer to an extent exists within a
@@ -24,12 +24,14 @@ struct isExtent {
   bool operator()(const Extent *e) const { return this->extent == e; }
 };
 
-using stack_val = std::list<Extent *>;
+using stack_val = std::vector<Extent *>;
 using ext_stack = std::map<int, stack_val>;
+using ext_stack_desc = std::map<int, stack_val, std::greater<int>>;
 
 // Used for WholeObjectExtentStack, which stores extent lists together
-using stack_lst = std::list<stack_val>;
+using stack_lst = std::vector<stack_val>;
 using ext_lst_stack = std::map<int, stack_lst>;
+using ext_lst_stack_desc = std::map<int, stack_lst, std::greater<int>>;
 
 class AbstractExtentStack {
 protected:
@@ -41,32 +43,32 @@ public:
   virtual ~AbstractExtentStack() {}
 
   virtual int num_stripes(int stripe_size) = 0;
-  virtual stack_val pop_stripe_num_exts(int stripe_size) = 0;
+  virtual list<Extent *> pop_stripe_num_exts(int stripe_size) = 0;
   virtual void add_extent(int key, Extent *ext){};
   virtual int get_length_of_extent_stack() = 0;
   virtual int get_length_at_key(int key) = 0;
   virtual Extent *get_extent_at_key(int key) = 0;
   virtual bool contains_extent(Extent *extent) = 0;
   virtual void remove_extent(Extent *extent) = 0;
-  virtual Extent *get_extent_at_closest_key(int key) { return nullptr; };
+  virtual Extent *get_extent_at_closest_key(int key) { std::cerr<<"should never be called virtual get_ext_at_closet_key"; return nullptr; };
   virtual void add_extent(stack_val &ext_lst) {
     std::cerr << "extent stack virtual add extent!";
   }
 };
-
+template<typename ext_stack_T = ext_stack_desc>
 class ExtentStack : public AbstractExtentStack {
 
 protected:
   // ordered by key
-  ext_stack extent_stack;
+  ext_stack_T extent_stack;
 
 public:
   ExtentStack(shared_ptr<StripeManager> s_m)
-      : AbstractExtentStack(s_m), extent_stack(ext_stack()) {}
+      : AbstractExtentStack(s_m), extent_stack(ext_stack_T()) {}
 
   virtual int num_stripes(int stripe_size) override = 0;
 
-  virtual stack_val pop_stripe_num_exts(int stripe_size) override = 0;
+  virtual list<Extent *> pop_stripe_num_exts(int stripe_size) override = 0;
 
   void add_extent(int key, Extent *ext) override {
     if (this->extent_stack.find(key) == this->extent_stack.end())
@@ -101,7 +103,7 @@ public:
       return nullptr;
     stack_val * exts = &this->extent_stack[key];
     Extent *ret = exts->front();
-    exts->pop_front();
+    exts->erase(exts->begin());
     if (exts->size() == 0)
       extent_stack.erase(key);
     
@@ -118,21 +120,32 @@ public:
 
   // can end early
   virtual void remove_extent(Extent *extent) override {
-    for (auto &kv : extent_stack) {
-      kv.second.remove(extent);
-      if (kv.second.size() == 0)
-        extent_stack.erase(kv.first);
+    auto it =  extent_stack.begin();
+    while (it != extent_stack.end()) {
+      auto found = std::find(it->second.begin(), it->second.end(), extent);
+      if(found != it->second.end())
+      {
+        it->second.erase(found);
+      }
+      
+      if (it->second.size() == 0)
+      {
+        it = extent_stack.erase(it);
+      }else {
+        it++;
+      }
     }
+    
   }
 };
-
-class SingleExtentStack : public ExtentStack {
-  using ExtentStack::ExtentStack;
+template<typename T = ext_stack_desc> 
+class SingleExtentStack : public ExtentStack<T>{
+  using ExtentStack<T>::ExtentStack;
 
 public:
-  ext_stack get_extent_stack() { return extent_stack; }
+  T * get_extent_stack() { return &this->extent_stack; }
   int num_stripes(int stripe_size) override {
-    return get_length_of_extent_stack() / stripe_size;
+    return this->get_length_of_extent_stack() / stripe_size;
   }
 
   list<Extent *> pop_stripe_num_exts(int stripe_size) override {
@@ -141,27 +154,32 @@ public:
     if (this->get_length_of_extent_stack() < num_left_to_add) {
       return ret;
     }
-    for (auto &kv : extent_stack) {
-      list<Extent *> ext_lst = kv.second;
+    auto it = this->extent_stack.begin();
+    while (it != this->extent_stack.end()) {
       for (int i = 0;
-           i < (kv.second.size() > num_left_to_add ? num_left_to_add
-                                                   : kv.second.size());
+           i < (it->second.size() > num_left_to_add ? num_left_to_add
+                                                   : it->second.size());
            i++) {
-        ret.push_back(ext_lst.front());
-        ext_lst.pop_front();
+        ret.push_back(it->second.front());
+        it->second.erase(it->second.begin());
       }
-      if (ext_lst.size() == 0) {
-        this->extent_stack.erase(kv.first);
+      if (it->second.size() == 0) {
+        it = this->extent_stack.erase(it);
+      }else {
+        it++;
       }
+
       num_left_to_add = stripe_size - ret.size();
     }
     return ret;
   }
 };
 
-class MultiExtentStack : public ExtentStack {
+class MultiExtentStack : public ExtentStack<ext_stack> {
+  public:
   using ExtentStack::ExtentStack;
-  int num_stripes(int stripe_size) {
+
+  int num_stripes(int stripe_size) override {
     int num_stripes = 0;
     for (auto &kv : extent_stack) {
       num_stripes += kv.second.size() / stripe_size;
@@ -169,28 +187,30 @@ class MultiExtentStack : public ExtentStack {
     return num_stripes;
   }
 
-  list<Extent *> pop_stripe_num_exts(int stripe_size) {
-    list<Extent *> ret;
-    for (auto &kv : extent_stack) {
-      list<Extent *> ext_lst = kv.second;
-      if (ext_lst.size() >= stripe_size) {
+  list<Extent *> pop_stripe_num_exts (int stripe_size) override{
+    list<Extent *>ret;
+    auto it = extent_stack.begin();
+    while (it!= extent_stack.end()) {
+      vector<Extent *> *ext_lst = &it->second;
+      if (ext_lst->size() >= stripe_size) {
         for (int i = 0; i < stripe_size; i++) {
-          ret.push_back(ext_lst.front());
-          ext_lst.pop_front();
+          ret.push_back(ext_lst->front());
+          ext_lst->erase(ext_lst->begin());
         }
-        if (ext_lst.size() == 0) {
-          extent_stack.erase(kv.first);
+        if (ext_lst->size() == 0) {
+          extent_stack.erase(it);
         }
         return ret;
       }
+      it++;
     }
     return ret;
   }
 };
 
-class BestEffortExtentStack : public SingleExtentStack {
+class BestEffortExtentStack : public SingleExtentStack<ext_stack> {
 public:
-  using SingleExtentStack::SingleExtentStack;
+  using SingleExtentStack<ext_stack> ::SingleExtentStack;
   // double check correctness
   Extent *get_extent_at_closest_key(int key) override {
     if (extent_stack.size() == 1) {
@@ -218,8 +238,8 @@ public:
 };
 class ExtentStackRandomizer : public AbstractExtentStack {
 public:
-  std::shared_ptr<SingleExtentStack> extent_stack;
-  ExtentStackRandomizer(std::shared_ptr<SingleExtentStack> e_s)
+  std::shared_ptr<SingleExtentStack<>> extent_stack;
+  ExtentStackRandomizer(std::shared_ptr<SingleExtentStack<>> e_s)
       : extent_stack(e_s) {}
   int num_stripes(int stripe_size) override {
     return extent_stack->num_stripes(stripe_size);
@@ -238,23 +258,29 @@ public:
     extent_stack->remove_extent(extent);
   }
   list<Extent *> pop_stripe_num_exts(int stripe_size) override {
-    for (auto &kv : extent_stack->get_extent_stack()) {
+    auto it = extent_stack->get_extent_stack()->begin();
+    while (it != extent_stack->get_extent_stack()->end() ) {
       auto rng = std::default_random_engine{};
-      std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), rng);
+      it++;
     }
     return extent_stack->pop_stripe_num_exts(stripe_size);
   }
   Extent *get_extent_at_closest_key(int key) override {
-    for (auto &kv : extent_stack->get_extent_stack()) {
+    auto it = extent_stack->get_extent_stack()->begin();
+    while (it != extent_stack->get_extent_stack()->end() ) {
       auto rng = std::default_random_engine{};
-      std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), rng);
+      it++;
     }
     return extent_stack->get_extent_at_closest_key(key);
   }
   Extent *get_extent_at_key(int key) override {
-    for (auto &kv : extent_stack->get_extent_stack()) {
+    auto it = extent_stack->get_extent_stack()->begin();
+    while (it != extent_stack->get_extent_stack()->end() ) {
       auto rng = std::default_random_engine{};
-      std::shuffle(*kv.second.begin(), *kv.second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), rng);
+      it++;
     }
     return extent_stack->get_extent_at_key(key);
   }
@@ -263,12 +289,12 @@ public:
 class WholeObjectExtentStack : public AbstractExtentStack {
   using AbstractExtentStack::AbstractExtentStack;
 
-  ext_lst_stack extent_stack;
+  ext_lst_stack_desc extent_stack;
 
 public:
   WholeObjectExtentStack(shared_ptr<StripeManager> stripe_manager)
       : AbstractExtentStack(stripe_manager) {
-    this->extent_stack = ext_lst_stack();
+    this->extent_stack = ext_lst_stack_desc();
   }
 
   /*
@@ -286,9 +312,10 @@ public:
 
   void add_extent(stack_val &ext_lst) override {
     int key = ext_lst.size();
-    if (this->extent_stack.find(key) != this->extent_stack.end())
+    //std::cout << "key" << key <<std::endl;
+    if (this->extent_stack.find(key) == this->extent_stack.end())
       extent_stack.emplace(key, stack_lst());
-    extent_stack[key].emplace_back(ext_lst);
+    extent_stack[key].push_back(ext_lst);
   }
 
   int get_length_of_extent_stack() override {
@@ -305,51 +332,50 @@ public:
     stack_val ret;
     int temp = num_left_to_add;
     while (temp > 0) {
-      auto it = extent_stack.upper_bound(temp);
-      if (it != extent_stack.begin())
-        it = prev(it);
-
-      stack_val &lst = *it->second.begin();
-      it->second.begin()->pop_front();
-      temp -= lst.size();
-      for (auto e : lst) {
-        lst.pop_front();
+      auto it = extent_stack.lower_bound(temp);
+      
+      for(auto e: *(it->second.begin()))
+      {
         ret.push_back(e);
       }
-      if (it->second.size() == 0)
-        extent_stack.erase(it->first);
+      temp -= it->second.begin()->size();
+      it->second.erase(it->second.begin());
+      if (it->second.empty())
+        extent_stack.erase(it);
     }
     return ret;
   }
 
   /*error prone double check*/
-  stack_val pop_stripe_num_exts(int stripe_size) override {
-    stack_val ret;
+  list<Extent *> pop_stripe_num_exts(int stripe_size) override {
+    list<Extent *> ret;
     int num_left_to_add = stripe_size;
 
     if (get_length_of_extent_stack() < num_left_to_add)
       return ret;
 
-    int largest_key = prev(extent_stack.end())->first;
-    auto largest = prev(extent_stack.end());
-    stack_val longest_lst = *largest->second.begin();
-    largest->second.pop_front();
+    int largest_key = extent_stack.begin()->first;
+    auto largest_kv = extent_stack.begin();
+    stack_val longest_lst = *(largest_kv->second.begin());
+    largest_kv->second.erase(largest_kv->second.begin());
     for (int i = 0;
          i < (num_left_to_add > largest_key ? largest_key : num_left_to_add);
          i++) {
       ret.push_back(longest_lst.front());
-      longest_lst.pop_front();
+      longest_lst.erase(longest_lst.begin());
     }
 
     num_left_to_add = stripe_size - ret.size();
-    if (longest_lst.size() == 0)
-      extent_stack.erase(largest_key);
+    if (largest_kv->second.size() == 0)
+      extent_stack.erase(largest_kv);
+    //std::cout << "longest_lst_size" << longest_lst.size()<<std::endl;
     if (longest_lst.size() > 0)
       add_extent(longest_lst);
     if (num_left_to_add > 0)
+    { 
       for (Extent *e : fill_gap(num_left_to_add))
         ret.push_back(e);
-
+    }
     return ret;
   }
 
@@ -374,12 +400,16 @@ public:
        return ext
   */
   Extent *get_extent_at_key(int k) override {
-    stack_val &exts = extent_stack.begin()->second.front();
-    Extent *ext = exts.front();
-    exts.pop_front();
-    if (exts.size() == 0)
-      extent_stack.erase(extent_stack.begin()->first);
-    return ext;
+    if(extent_stack.size() > 0)
+    {
+      auto smallest = std::prev(extent_stack.end());
+      auto ext = smallest->second.front().front();
+      smallest->second.erase(smallest->second.begin());
+      if (smallest->second.size() == 0)
+        extent_stack.erase(smallest);
+      return ext;
+    }
+    return nullptr;
   }
 
   bool contains_extent(Extent *extent) override {
@@ -393,17 +423,31 @@ public:
   }
 
   void remove_extent(Extent *extent) override {
-    for (auto &kv : extent_stack) {
-      for (auto &l : kv.second) {
-        auto it = find(l.begin(), l.end(), extent);
-        if (it != l.end()) {
-          l.remove(extent);
-          if (l.size() == 0)
-            kv.second.remove(l);
+    auto it = extent_stack.begin();
+    while(it != extent_stack.end())
+    {
+      auto lst_it = it->second.begin();
+      *lst_it->begin();
+      while(lst_it != it->second.end())
+      {
+        auto found = std::find(lst_it->begin(), lst_it->end(), extent);
+        if(found != lst_it->end())
+        {
+          lst_it->erase(found);
+        }
+        if(lst_it->empty())
+        {
+          lst_it = it->second.erase(lst_it);
+        }else{
+          lst_it++;
         }
       }
-      if (kv.second.size() == 0)
-        extent_stack.erase(kv.first);
+      if(it->second.size() != 0)
+      {
+        it = extent_stack.erase(it);
+      }else{
+        it++;
+      }
     }
   }
 };
