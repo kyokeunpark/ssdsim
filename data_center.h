@@ -85,7 +85,8 @@ struct sim_metric {
 class DataCenter {
 
   unsigned long max_size;
-  int simul_time, gc_cycle, gced_space;
+  int gc_cycle, gced_space;
+  float simul_time;
   float striping_cycle;
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
@@ -104,7 +105,7 @@ public:
              shared_ptr<ObjectManager> obj_mngr,
              shared_ptr<EventManager> event_mngr,
              shared_ptr<GarbageCollectionStrategy> gc_strategy,
-             shared_ptr<StripingProcessCoordinator> coordinator, int simul_time,
+             shared_ptr<StripingProcessCoordinator> coordinator, float simul_time,
              int gc_cycle)
       : max_size(max_size), striping_cycle(striping_cycle), striper(striper),
         ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
@@ -141,8 +142,8 @@ public:
         ex->stripe->update_obsolete(temp);
         ret.gc_stripes_set.emplace(ex->stripe);
         ret.total_added_obsolete += temp;
-      } else if (this->coordinator->extent_in_extent_stacks(
-                     ex)) { // Sealed extent
+      } else if (this->coordinator->extent_in_extent_stacks(ex)) {
+        // Sealed extent
         this->coordinator->del_sealed_extent(ex);
         this->ext_mngr->delete_extent(ex);
       } else { // Unsealed extent
@@ -165,13 +166,13 @@ public:
     double daily_max_perc = 0;
     double obs_perc = -1;
     double obs_timestamp = -1;
-    int next_del_time = this->simul_time + 1;
+    float next_del_time = this->simul_time + 1;
     vector<double> obs_percentages = vector<double>();
     unordered_map<string, int> net_obs_by_ext_type =
         unordered_map<string, int>();
     ExtentObject *next_del_obj = nullptr;
 
-    while (configtime <= (int)this->simul_time &&
+    while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =

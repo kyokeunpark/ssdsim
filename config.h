@@ -1,3 +1,3 @@
 #pragma once
 
-static inline double configtime = 0;
+static inline double configtime = 0.0;

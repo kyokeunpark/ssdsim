@@ -7,7 +7,7 @@ using std::list;
 using std::priority_queue;
 
 // im using std tuple
-using event = std::tuple<int, ExtentObject *>;
+using event = std::tuple<float, ExtentObject *>;
 
 class EventManager {
 public:
@@ -15,7 +15,11 @@ public:
 
   EventManager() : events(new priority_queue<event>()) {}
 
-  void put_event(int life, ExtentObject *obj) {
+  void put_event(float life, ExtentObject *obj) {
+    std::cout << life;
+    if (obj)
+      std::cout << ", " << obj->id;
+    std::cout << std::endl;
     events->emplace(event(life, obj));
   }
 

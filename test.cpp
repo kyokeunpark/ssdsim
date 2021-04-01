@@ -7,6 +7,9 @@
 #include <iostream>
 #include <memory>
 
+/****************************************
+ * Sampler
+ ****************************************/
 TEST(SamplerTest, SanityCheckSampler1Value) {
   SanityCheckSampler1 sampler = SanityCheckSampler1(5, 5);
   sample_pair t = sampler.get_size_age_sample(1);
@@ -17,6 +20,9 @@ TEST(SamplerTest, SanityCheckSampler1Value) {
   EXPECT_EQ(l.front(), 6.0);
 }
 
+/****************************************
+ * ObjectManager
+ ****************************************/
 TEST(ObjectManagerTest, CreateOneNewObject) {
   ObjectManager o_m =
       ObjectManager(make_shared<EventManager>(),
@@ -64,6 +70,9 @@ TEST(ObjectManagerTest, DeleteObject) {
   EXPECT_EQ(o_m.get_object(0), nullptr);
 };
 
+/****************************************
+ * StripeManager
+ ****************************************/
 TEST(StripeManagerTest, GetDataDcSizeANDGetTotalDataDcSize) {
   StripeManager s_m = StripeManager(7, 2, 2, 2, 0.0);
   s_m.create_new_stripe(5);
@@ -90,6 +99,9 @@ TEST(StripeManagerTest, DeleteStripe) {
             s_m.stripes->end());
 };
 
+/****************************************
+ * ExtentManager
+ ****************************************/
 TEST(ExtentManagerTest, CreateNewExtent) {
   ExtentManager e_m = ExtentManager(100, nullptr);
   Extent *e1 = e_m.create_extent(5);
@@ -135,7 +147,9 @@ TEST(ExtentManagerTest, GetExtTypes) {
   EXPECT_EQ(types["large"], 1);
 };
 
-
+/****************************************
+ * ExtentStack
+ ****************************************/
 TEST(ExtentStack, AddExtentGetLengthOfExtentStack) {
   int ext_size = 3*1024;
   std::shared_ptr<StripeManager> s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
@@ -532,6 +546,45 @@ TEST(ExtentStack, WholeObjectExtentStackContainsRemoveExtent) {
   auto ret = e_s->pop_stripe_num_exts(3);
   EXPECT_EQ(ret.size(), 0);
 };
+
+/****************************************
+ * Striper
+ ****************************************/
+TEST(Striper, SimpleStriperCreateStripeWithSingleExtentStack) {
+  int ext_size = 3*1024;
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<SingleExtentStack<>>(s_m);
+  std::shared_ptr<SimpleStriper> striper = make_shared<SimpleStriper>(s_m, e_m);
+  for (int i = 0; i < 60; i++) {
+    auto e = e_m->create_extent(i);
+    e->timestamp = 123;
+    e_s->add_extent(i, e);
+  }
+  auto costs = striper->create_stripes(e_s, 365.0);
+  EXPECT_EQ(costs.stripes, 1);
+  EXPECT_EQ(costs.reads, 735);
+  EXPECT_EQ(costs.writes, 735);
+}
+
+TEST(Striper, SimpleStriperCreateStripeWithMultiExtentStack) {
+  int ext_size = 3*1024;
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<MultiExtentStack>(s_m);
+  auto striper = make_shared<SimpleStriper>(s_m, e_m);
+  for (int i = 0; i < 4; i++) {
+    for (int j = 1; j < 60; j++) {
+      auto e = e_m->create_extent(j);
+      e->timestamp = 123;
+      e_s->add_extent(i, e);
+    }
+  }
+  auto costs = striper->create_stripes(e_s, 365.0);
+  EXPECT_EQ(costs.stripes, 1);
+  EXPECT_EQ(costs.reads, 91);
+  EXPECT_EQ(costs.writes, 91);
+}
   
 
 int main(int argc, char **argv) {

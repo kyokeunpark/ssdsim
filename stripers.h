@@ -42,12 +42,12 @@ public:
         num_times_default(0) {}
 
   virtual str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                                   int simulation_time) {
+                                   float simulation_time) {
     std::cerr << "virtual create_stripes should never happen";
     return str_costs();
   };
   virtual str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
-                                  int simulation_time) {
+                                  float simulation_time) {
     std::cerr << "virtual create_stripes should never happen";
     return str_costs();
   };
@@ -74,7 +74,7 @@ public:
   list<string> ext_types;
   int num_stripes_reqd() override { return 1; }
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                           int simulation_time) override {
+                           float simulation_time) override {
 
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     int writes = 0;
@@ -112,7 +112,7 @@ public:
       : AbstractStriper(s->stripe_manager, s->extent_manager), striper(s) {}
 
   virtual str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
-                                  int simulation_time) = 0;
+                                  float simulation_time) = 0;
 
   virtual repl_costs
   cost_to_replace_extents(int ext_size, vector<int> exts_per_locality,
@@ -135,7 +135,7 @@ public:
   int num_stripes_reqd() override { return 0; }
 
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                           int simulation_time) override {
+                           float simulation_time) override {
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     str_costs total = {0};
     while (extent_stack->num_stripes(num_exts))
@@ -145,7 +145,7 @@ public:
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
-                          int simulation_time) override {
+                          float simulation_time) override {
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     str_costs total = {0};
     if (extent_stack->num_stripes(num_exts))
@@ -170,7 +170,7 @@ public:
   int num_stripes_reqd() override { return num_stripes_per_cycle; }
 
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                           int simulation_time) override {
+                           float simulation_time) override {
     str_costs total = {0};
     for (int i = 0; i < num_stripes_per_cycle; i++)
       total += striper->create_stripes(extent_stack, simulation_time);
@@ -178,7 +178,7 @@ public:
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
-                          int simulation_time) override {
+                          float simulation_time) override {
     return striper->create_stripes(extent_stack, simulation_time);
   }
 
@@ -202,14 +202,14 @@ public:
   int num_stripes_reqd() override { return striper->num_stripes_reqd(); }
 
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                           int simulation_time) override {
+                           float simulation_time) override {
     str_costs res = striper->create_stripes(extent_stack, simulation_time);
     res.writes *= stripe_manager->coding_overhead;
     return res;
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
-                          int simulation_time) override {
+                          float simulation_time) override {
     str_costs res = striper->create_stripe(extent_stack, simulation_time);
     res.writes *= stripe_manager->coding_overhead;
     return res;
