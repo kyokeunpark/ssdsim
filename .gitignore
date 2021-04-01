@@ -37,3 +37,6 @@
 # Cmake build file
 build/
 compile_commands.json
+cscope.*
+.cache
+.clang-format

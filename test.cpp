@@ -642,7 +642,7 @@ TEST(StriperTest, ExtentStackStriperWithSimpleExtentStack) {
   EXPECT_EQ(total.writes, 6438);
 }
 
-TEST(StriperTest, NumStripesStriperWithSimpleExtentStack) {
+TEST(StriperTest, NumStripesStriperWithMultiExtentStack) {
   int ext_size = 3*1024;
   str_costs total = {0};
   auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
