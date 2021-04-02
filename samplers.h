@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
+#include <iterator>
 #include <random>
 #include <utility>
 #include <vector>
@@ -13,7 +15,7 @@
 using sizes = std::vector<float>;
 using lives = std::vector<float>;
 using sample_pair = std::pair<sizes, lives>;
-
+static std::mt19937 generator;
 static inline int randint(int min, int max) {
   return (rand() % ((max + 1) + min)) + min;
 }
@@ -26,11 +28,12 @@ class Sampler {
 protected:
   float sim_time;
   unsigned seed;
-
+  
 public:
   Sampler(float sim_time) {
     this->sim_time = sim_time;
     this->seed = std::chrono::system_clock::now().time_since_epoch().count();
+    generator = std::mt19937(this->seed);
   }
 
   /*
@@ -57,12 +60,12 @@ private:
    */
   sizes sample_size(const int num_samples) {
     sizes sizes_lst = sizes();
-    std::mt19937 generator(this->seed);
+    // static std::mt19937 generator(this->seed);
     std::uniform_real_distribution<double> real_dist(0.0, 100.0);
-
+    
     for (int i = 0; i < num_samples; i++) {
       double temp = real_dist(generator);
-
+      // std::cout << "size" << temp << std::endl;
       if (temp < 50)
         sizes_lst.emplace_back(randint(4, 10));
       else if (temp < 65)
@@ -104,12 +107,11 @@ private:
    */
   lives sample_life(const int num_samples) {
     lives lives_lst = lives();
-    std::mt19937 generator(this->seed);
     std::uniform_real_distribution<double> real_dist(0.0, 100.0);
 
     for (int i = 0; i < num_samples; i++) {
       double temp = real_dist(generator);
-
+      // std::cout << "life" << temp << std::endl;
       if (temp < 5)
         lives_lst.emplace_back(1);
       else if (temp < 9)

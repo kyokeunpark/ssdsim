@@ -3,6 +3,7 @@
 #include "event_manager.h"
 #include "extent_object_stripe.h"
 #include "samplers.h"
+#include "striping_process_coordinator.h"
 #include <memory>
 #include <random>
 #include <unordered_map>
@@ -26,7 +27,7 @@ public:
       : objects(unordered_map<int, ExtentObject *>()),
         event_manager(e_m), sampler(s),
         add_noise(a_n) {
-    max_id = 1;
+    max_id = 0;
     srand(0);
   }
 

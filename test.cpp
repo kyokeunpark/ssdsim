@@ -1,6 +1,8 @@
 #include "configs.h"
 #include "extent_manager.h"
+#include "extent_object_stripe.h"
 #include "extent_stack.h"
+#include "object_packer.h"
 #include "stripe_manager.h"
 #include "stripers.h"
 #include "gc_strategies.h"
@@ -664,6 +666,68 @@ TEST(StriperTest, NumStripesStriperWithMultiExtentStack) {
   EXPECT_EQ(total.stripes, 6);
   EXPECT_EQ(total.reads, 2002);
   EXPECT_EQ(total.writes, 2002);
+}
+
+
+/****************************************
+ * ObjectPacker
+ ****************************************/
+
+TEST(ObjectPackerTest, SimpleObjectPacker) {
+  int ext_size = 3*1024;
+  auto s_m  = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto o_m =
+      make_shared<ObjectManager>(make_shared<EventManager>(),
+                    make_shared<DeterministicDistributionSampler>(365));
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto o_p = make_shared<SimpleObjectPacker>(o_m, e_m, object_lst(), current_extents(), 10,
+      2, true);
+  auto e_s = make_shared<SingleExtentStack<>>(s_m);
+  Extent *e1 = e_m->create_extent(5);
+  Extent *e2 = e_m->create_extent(10);
+  Extent *e3 = e_m->create_extent(15);
+  Extent *e4 = e_m->create_extent(12);
+  e_s->add_extent(1, e1);
+  e_s->add_extent(2, e2);
+  e_s->add_extent(2, e3);
+  e_s->add_extent(3, e4);
+  o_p->generate_exts_at_key(e_s, 2, 0);
+  EXPECT_EQ(e_s->get_length_of_extent_stack(), 6);
+  auto get_res1 = e_s->get_extent_at_key(0);
+  EXPECT_EQ(get_res1->free_space, 0);
+  EXPECT_EQ(o_p->is_ext_in_current_extents(get_res1), false);
+  auto get_res2 = e_s->get_extent_at_key(0);
+  EXPECT_EQ(get_res2->free_space, 0);
+  EXPECT_EQ(o_p->is_ext_in_current_extents(get_res2), false);
+  EXPECT_EQ(e_s->get_extent_at_key(0), nullptr);
+  EXPECT_EQ(e_s->get_extent_at_key(1), e1);
+  EXPECT_EQ(e_s->get_extent_at_key(2), e2);
+  EXPECT_EQ(e_s->get_extent_at_key(3), e4);
+  EXPECT_EQ(o_p->get_current_exts().size(), 1);
+}
+
+
+/****************************************
+ * StripingProcessCoordinator
+ ****************************************/
+
+TEST(StripingProcessCoordinator, StripingProcessCoordinator) {
+  int ext_size = 3*1024;
+  SimpleSampler sampler = DeterministicDistributionSampler(365);
+  shared_ptr<EventManager> event_mngr = make_shared<EventManager>();
+  shared_ptr<ObjectManager> obj_mngr =
+      make_shared<ObjectManager>(event_mngr, sampler, true);
+  shared_ptr<ExtentManager> ext_mngr =
+      make_shared<ExtentManager>(ext_size);
+  shared_ptr<StripeManager> stripe_mngr = make_shared<StripeManager>(7, 2,
+                                             2,
+                                             2, 0);
+  shared_ptr<AbstractStriperDecorator> striper =
+      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
+          make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
+  shared_ptr<StriperWithEC> gc_striper =
+      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
+          make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 }
 
 int main(int argc, char **argv) {
