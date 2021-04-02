@@ -2,12 +2,13 @@
 #include "config.h"
 #include "extent_object_stripe.h"
 #include <cstdio>
+#include <set>
 // get_extents(stripe id) not used anywhere not implemented
 // member variable ext_size_to_stripes not used anywhere not implemented
 // getters not implemented since variables are public
 class StripeManager {
 public:
-  list<Stripe *> *stripes;
+  std::set<Stripe *> *stripes;
   int num_data_exts_per_locality;
   float num_local_parities;
   float num_global_parities;
@@ -20,7 +21,7 @@ public:
   StripeManager(int num_data_extents, float num_local_parities,
                 float num_global_parities, int num_localities_in_stripe,
                 float coding_overhead = 0)
-      : stripes(new list<Stripe *>()),
+      : stripes(new std::set<Stripe *>()),
         num_data_exts_per_locality(num_data_extents),
         num_local_parities(num_local_parities),
         num_global_parities(num_global_parities),
@@ -64,9 +65,9 @@ public:
     //  ext_size = self.ext_size
     Stripe *stripe = new Stripe(max_id++, num_data_exts_per_locality,
                                 num_localities_in_stripe, ext_size, 15);
-    stripes->push_back(stripe);
+    stripes->insert(stripe);
     return stripe;
   }
 
-  void delete_stripe(Stripe *stripe) { stripes->remove(stripe); }
+  void delete_stripe(Stripe *stripe) { stripes->erase(stripe); }
 };

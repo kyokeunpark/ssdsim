@@ -106,7 +106,7 @@ TEST(StripeManagerTest, DeleteStripe) {
   StripeManager s_m = StripeManager(1, 2.0 / 14, 2.0 / 14, 1, 18.0 / 14);
   s_m.create_new_stripe(5);
   s_m.create_new_stripe(10);
-  Stripe *s = s_m.stripes->front();
+  Stripe *s = *s_m.stripes->begin();
   s_m.delete_stripe(s);
   EXPECT_EQ(find(s_m.stripes->begin(), s_m.stripes->end(), s),
             s_m.stripes->end());

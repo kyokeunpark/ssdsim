@@ -2,15 +2,15 @@
 #include "extent_object_stripe.h"
 #include <any>
 #include <unordered_map>
-
+#include <set>
 class ExtentManager {
 public:
   int ext_size;
-  list<Extent *> exts;
+  std::set<Extent *> exts;
   int max_id;
   float (Extent::*key_fnc)();
   ExtentManager(int s, float (Extent::*k_f)())
-      : ext_size(s), key_fnc(k_f), exts(list<Extent *>()) {
+      : ext_size(s), key_fnc(k_f), exts(std::set<Extent *>()) {
         max_id = 0;
       }
 
@@ -25,7 +25,7 @@ public:
     } else {
       e = new Extent(s, secondary_threshold);
     }
-    exts.push_back(e);
+    exts.insert(e);
     return e;
   }
 
@@ -40,5 +40,5 @@ public:
     return ret;
   }
 
-  void delete_extent(Extent *extent) { exts.remove(extent); }
+  void delete_extent(Extent *extent) { exts.erase(extent); }
 };
