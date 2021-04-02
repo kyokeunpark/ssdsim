@@ -74,14 +74,15 @@ public:
   void del_sealed_extent(Extent *extent) {
     cout << extent << endl;
     auto objs = extent->delete_ext();
+    auto temp = std::set<ExtentObject*>();
     if (extent_stack->contains_extent(extent)) {
       extent_stack->remove_extent(extent);
       object_packer->add_objs(objs);
-      object_packer->pack_objects(extent_stack);
+      object_packer->pack_objects(extent_stack, temp);
     } else if (gc_extent_stack->contains_extent(extent)) {
       gc_extent_stack->remove_extent(extent);
       gc_object_packer->add_objs(objs);
-      gc_object_packer->pack_objects(gc_extent_stack);
+      gc_object_packer->pack_objects(gc_extent_stack, temp);
     }
   }
 

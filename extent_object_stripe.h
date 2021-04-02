@@ -69,6 +69,7 @@ class Extent {
 public:
   double obsolete_space;
   int free_space;
+  int id;
   double ext_size;
 
   unordered_map<ExtentObject *, list<Extent_Object_Shard *>> *objects;

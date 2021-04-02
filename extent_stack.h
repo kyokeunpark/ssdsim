@@ -10,7 +10,7 @@ using std::max;
 using std::min;
 using std::shared_ptr;
 typedef vector<Extent *> *extent_stack_ext_lst;
-
+static auto rng = std::default_random_engine(0);
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
@@ -269,7 +269,7 @@ public:
   list<Extent *> pop_stripe_num_exts(int stripe_size) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
-      auto rng = std::default_random_engine{};
+
       std::shuffle(it->second.begin(), it->second.end(), rng);
       it++;
     }
@@ -278,7 +278,6 @@ public:
   Extent *get_extent_at_closest_key(int key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
-      auto rng = std::default_random_engine{};
       std::shuffle(it->second.begin(), it->second.end(), rng);
       it++;
     }
@@ -287,7 +286,6 @@ public:
   Extent *get_extent_at_key(int key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
-      auto rng = std::default_random_engine{};
       std::shuffle(it->second.begin(), it->second.end(), rng);
       it++;
     }

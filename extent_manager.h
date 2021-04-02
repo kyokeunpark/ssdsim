@@ -7,9 +7,12 @@ class ExtentManager {
 public:
   int ext_size;
   list<Extent *> exts;
+  int max_id;
   float (Extent::*key_fnc)();
   ExtentManager(int s, float (Extent::*k_f)())
-      : ext_size(s), key_fnc(k_f), exts(list<Extent *>()) {}
+      : ext_size(s), key_fnc(k_f), exts(list<Extent *>()) {
+        max_id = 0;
+      }
 
   float get_key(Extent *ext) { return (ext->*key_fnc)(); }
 

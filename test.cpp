@@ -706,30 +706,6 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
   EXPECT_EQ(o_p->get_current_exts().size(), 1);
 }
 
-
-/****************************************
- * StripingProcessCoordinator
- ****************************************/
-
-TEST(StripingProcessCoordinator, StripingProcessCoordinator) {
-  int ext_size = 3*1024;
-  SimpleSampler sampler = DeterministicDistributionSampler(365);
-  shared_ptr<EventManager> event_mngr = make_shared<EventManager>();
-  shared_ptr<ObjectManager> obj_mngr =
-      make_shared<ObjectManager>(event_mngr, sampler, true);
-  shared_ptr<ExtentManager> ext_mngr =
-      make_shared<ExtentManager>(ext_size);
-  shared_ptr<StripeManager> stripe_mngr = make_shared<StripeManager>(7, 2,
-                                             2,
-                                             2, 0);
-  shared_ptr<AbstractStriperDecorator> striper =
-      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
-          make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-  shared_ptr<StriperWithEC> gc_striper =
-      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
-          make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-}
-
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

@@ -131,7 +131,7 @@ public:
       this->gced_space += temp;
       ex->del_object(obj);
 
-      std::cout << "TESTING " << obj->id << ", " << temp << std::endl;
+      // std::cout << "TESTING " << obj->id << ", " << temp << std::endl;
       // Extent in stripe
       if (ex->stripe != nullptr) {
         if (ret.ext_types.find(ex->type) != ret.ext_types.end())
@@ -176,6 +176,7 @@ public:
 
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
+      // cout << "next_del_time" << next_del_time << "configtime"<< configtime << endl;
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =
           unordered_map<string, int>();
@@ -185,7 +186,7 @@ public:
 
       // Find all candidates for GC
       set<Stripe *> gc_stripes_set = set<Stripe *>();
-      while (next_del_time <= configtime && !this->event_mngr->empty()) {
+      while (next_del_time <= configtime && !event_mngr->empty()) {
         del_result dr = this->del_object(next_del_obj);
         gc_stripes_set.insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());

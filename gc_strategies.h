@@ -188,7 +188,7 @@ public:
       // percentage return?
       double obsolete = stripe->get_obsolete_percentage();
       if (obsolete >= primary_threshold && stripe != nullptr) {
-        printf("%f %d", configtime, stripe->id);
+        // fprintf(stderr, "%f %d", configtime, stripe->id);
         stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
         for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
           string key = kv.first;
@@ -328,7 +328,7 @@ public:
       // percentage return?
       double obsolete = stripe->get_obsolete_percentage();
       if (obsolete >= primary_threshold && stripe != nullptr) {
-        printf("%f %d", configtime, stripe->id);
+        // fprintf(stderr,"%f %d", configtime, stripe->id);
         stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
         for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
           string key = kv.first;
@@ -430,7 +430,7 @@ public:
       for (auto stripe : stripe_lst) {
         double obsolete = stripe->get_obsolete_percentage();
         if (obsolete >= primary_threshold && stripe != nullptr) {
-          printf("%f %d", configtime, stripe->id);
+          // fprintf(stderr,"%f %d", configtime, stripe->id);
           stripe_gc_ret stripe_gc_res = stripe_gc(stripe);
           for (auto &kv : stripe_gc_res.reclaimed_space_by_ext_types) {
             string key = kv.first;
