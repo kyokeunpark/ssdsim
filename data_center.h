@@ -33,8 +33,8 @@ struct eh_result {
   int total_used_space = 0;
   int dc_size = 0;
   int total_leftovers = 0;
-  int total_global_parity_reads = 0;
-  int total_global_parity_writes = 0;
+  unsigned long total_global_parity_reads = 0;
+  unsigned long total_global_parity_writes = 0;
   int total_local_parity_reads = 0;
   int total_local_parity_writes = 0;
   int total_obsolete_data_reads = 0;
@@ -59,8 +59,8 @@ struct sim_metric {
   double max_obs_perc = 0;
   double gc_ratio = 0;
   int total_reclaimed_space = 0;
-  int parity_reads = 0;
-  int parity_writes = 0;
+  unsigned long parity_reads = 0;
+  unsigned long parity_writes = 0;
   int total_user_data_reads = 0;
   int total_user_data_writes = 0;
   double total_gc_bandwidth = 0;
@@ -127,10 +127,11 @@ public:
       obj->remove_extent(ex);
 
       // Size of obj in extent
-      int temp = obj->get_size();
+      int temp = ex->get_obj_size(obj);
       this->gced_space += temp;
       ex->del_object(obj);
 
+      std::cout << "TESTING " << obj->id << ", " << temp << std::endl;
       // Extent in stripe
       if (ex->stripe != nullptr) {
         if (ret.ext_types.find(ex->type) != ret.ext_types.end())
@@ -139,6 +140,7 @@ public:
           ret.ext_types[ex->type] = temp;
 
         // Update stripe level obsolete data amount
+        // std::cout << temp << std::endl;
         ex->stripe->update_obsolete(temp);
         ret.gc_stripes_set.emplace(ex->stripe);
         ret.total_added_obsolete += temp;
@@ -309,6 +311,9 @@ public:
       configtime += this->gc_cycle;
 
       ret.dc_size = this->stripe_mngr->get_total_dc_size();
+
+      // if (next_del_obj)
+      //   std::cout << next_del_obj->id << std::endl;
     }
 
     cout << "Number of objects in dc: " << this->obj_mngr->get_num_objs()
@@ -317,7 +322,7 @@ public:
          << endl;
     cout << "Number of stripes in dc: " << this->stripe_mngr->get_num_stripes()
          << endl;
-    cout << "Ave number of exts gc'ed per cycle"
+    cout << "Ave number of exts gc'ed per cycle "
          << ret.total_exts_gced / ((configtime)*1 / this->striping_cycle)
          << endl;
 
@@ -369,7 +374,7 @@ public:
         (ret.total_user_data_writes + ret.total_user_data_reads);
 
     ret.total_gc_bandwidth = ret.total_bandwidth - total_user_bandwidth;
-    cout << "Parity reads, parity writes" << ret.parity_reads << ", "
+    cout << "Parity reads, parity writes " << ret.parity_reads << ", "
          << ret.parity_writes << endl;
 
     if (ret.total_reclaimed_space > 0)
