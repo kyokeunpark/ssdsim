@@ -15,20 +15,18 @@ using object_lst = std::vector<obj_record>;
 class ObjectManager {
 public:
   int max_id;
-  list<ExtentObject *> *objects;
   shared_ptr<EventManager> event_manager;
   shared_ptr<Sampler> sampler;
-  unordered_map<int, ExtentObject *> ids_to_obj;
+  unordered_map<int, ExtentObject *> objects;
   bool add_noise;
 
   ObjectManager() {}
   ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
                 bool a_n = true)
-      : objects(new list<ExtentObject *>()), event_manager(e_m), sampler(s),
+      : objects(unordered_map<int, ExtentObject *>()),
+        event_manager(e_m), sampler(s),
         add_noise(a_n) {
-    // np.random.seed(0)
-    this->ids_to_obj = unordered_map<int, ExtentObject *>();
-    max_id = 0;
+    max_id = 1;
     srand(0);
   }
 
@@ -49,8 +47,7 @@ public:
       life += configtime;
       ExtentObject *obj = new ExtentObject(max_id, size, life);
       new_objs.emplace_back(std::make_pair(obj, size));
-      this->objects->push_back(obj);
-      this->ids_to_obj[max_id] = obj;
+      this->objects[max_id] = obj;
       max_id++;
       event_manager->put_event(life, obj);
     }
@@ -58,16 +55,16 @@ public:
   }
 
   ExtentObject *get_object(int obj_id) {
-    if (this->ids_to_obj.find(obj_id) != this->ids_to_obj.end())
-      return this->ids_to_obj[obj_id];
+    if (this->objects.find(obj_id) != this->objects.end())
+      return this->objects[obj_id];
     return nullptr;
   }
 
-  int get_num_objs() { return objects->size(); }
+  int get_num_objs() { return objects.size(); }
 
   void remove_object(ExtentObject *obj) {
-    ids_to_obj.erase(obj->id);
-    objects->remove(obj);
+    objects.erase(obj->id);
   }
-  ~ObjectManager() { delete objects; }
+
+  ~ObjectManager() {}
 };

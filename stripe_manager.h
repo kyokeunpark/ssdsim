@@ -45,13 +45,13 @@ public:
     for (Stripe *stripe : *stripes) {
       dc_size += stripe->ext_size * num_data_exts_per_stripe;
     }
-    fprintf(stderr, "dc size: %f %d\n", configtime, dc_size);
+    // fprintf(stderr, "dc size: %f %d\n", configtime, dc_size);
     return dc_size;
   }
 
   double get_total_dc_size() {
-    fprintf(stderr, "dc total size: %f %f coding overhead: %f\n", configtime,
-            get_data_dc_size() * coding_overhead, coding_overhead);
+    // fprintf(stderr, "dc total size: %f %f coding overhead: %f\n", configtime,
+    //         get_data_dc_size() * coding_overhead, coding_overhead);
     return get_data_dc_size() * coding_overhead;
   }
 
