@@ -68,7 +68,7 @@ public:
 class Extent {
 public:
   double obsolete_space;
-  double free_space;
+  int free_space;
   double ext_size;
 
   unordered_map<ExtentObject *, list<Extent_Object_Shard *>> *objects;
@@ -98,17 +98,8 @@ public:
   double get_age() { return difftime(time(nullptr), timestamp); }
 
   int get_obj_size(ExtentObject *obj) {
-    int sum = 0;
-    auto it = objects->find(obj);
-    for (Extent_Object_Shard *s : it->second) {
-      sum += s->shard_size;
-    }
-    return sum;
-  }
-
-  int get_obj_size(int obj_id) {
-    auto shards = this->obj_ids_to_obj_size[obj_id];
-    return std::accumulate(shards.begin(), shards.end(), 0);
+    auto sizes = this->obj_ids_to_obj_size[obj->id];
+    return std::accumulate(sizes.begin(), sizes.end(), 0);
   }
 
   double get_obsolete_percentage() { return obsolete_space / ext_size * 100; }
@@ -131,19 +122,21 @@ public:
       this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
     } else {
       this->obj_ids_to_obj_size[obj_id] = {temp_size};
-      Extent_Object_Shard *new_shard = new Extent_Object_Shard(size);
+      Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
       obj->shards->push_back(new_shard);
       this->objects->emplace(
           std::make_pair(obj, list<Extent_Object_Shard *>()));
       this->objects->find(obj)->second.push_back(new_shard);
+      obj->add_extent(this);
     }
     free_space -= temp_size;
     return temp_size;
   }
 
   void remove_objects() {
-    delete objects;
-    objects = NULL;
+    for (auto obj : *this->objects)
+      obj.first->remove_extent(this);
+    this->objects->clear();
   }
 
   double del_object(ExtentObject *obj) {
@@ -226,6 +219,7 @@ public:
   void add_extent(Extent *ext) {
     if (free_space) {
       extents.push_back(ext);
+      ext->stripe = this;
       free_space -= 1;
       int locality = 0;
       while ((*localities)[locality] == num_data_blocks) {
