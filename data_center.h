@@ -124,6 +124,7 @@ public:
     auto ext_lst = obj->extents;
     std::reverse(ext_lst.begin(), ext_lst.end());
     for (auto ex : ext_lst) {
+      // cout << ex->type << endl;
       obj->remove_extent(ex);
 
       // Size of obj in extent
@@ -252,7 +253,6 @@ public:
         else
           ret.total_reclaimed_space_by_ext_type[it.first] += it.second;
       }
-
       for (auto it : this->obs_by_ext_types) {
         if (net_obs_by_ext_type.find(it.first) != net_obs_by_ext_type.end() &&
             ret.total_reclaimed_space_by_ext_type.find(it.first) !=

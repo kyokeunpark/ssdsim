@@ -72,7 +72,6 @@ public:
     return gc_extent_stack->get_length_of_extent_stack();
   }
   void del_sealed_extent(Extent *extent) {
-    cout << extent << endl;
     auto objs = extent->delete_ext();
     auto temp = std::set<ExtentObject*>();
     if (extent_stack->contains_extent(extent)) {

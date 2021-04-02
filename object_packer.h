@@ -135,20 +135,19 @@ public:
    */
   string get_extent_type(Extent *extent) {
     // Find the largest object stored in the extent
-    int largest_obj = INT32_MIN, local_max = 0, num_objs = 0;
+    int largest_obj = INT32_MIN, local_max = 0;
     for (auto &tuple : extent->obj_ids_to_obj_size) {
       std::vector<int> sizes = tuple.second;
       local_max = std::accumulate(sizes.begin(), sizes.end(), 0);
       if (largest_obj < local_max) {
         largest_obj = local_max;
-        num_objs = sizes.size();
       }
     }
     if (largest_obj >= this->threshold / 100.0 * extent->ext_size &&
         largest_obj < extent->ext_size) {
-      double frac = largest_obj / extent->ext_size;
-      return std::to_string(floor(frac) * 10) + "-" +
-             std::to_string(ceil(frac) * 10);
+      double frac = largest_obj / extent->ext_size * 10;
+      return std::to_string(int(floor(frac) * 10)) + "-" +
+             std::to_string(int(ceil(frac) * 10));
     } else if (largest_obj < this->threshold / 100.0 * extent->ext_size) {
       return "small";
     } else {
