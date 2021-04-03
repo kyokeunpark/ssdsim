@@ -3,7 +3,7 @@
 
 #include <cstdio>
 #pragma once
-
+#include <iomanip>
 #include "config.h"
 #include "event_manager.h"
 #include "extent_manager.h"
@@ -30,14 +30,14 @@ struct del_result {
 // Event handler result
 struct eh_result {
   int total_reclaimed_space = 0;
-  int total_obsolete = 0;
-  int total_used_space = 0;
+  unsigned long total_obsolete = 0;
+   unsigned long total_used_space = 0;
   unsigned long dc_size = 0;
   int total_leftovers = 0;
   unsigned long total_global_parity_reads = 0;
   unsigned long total_global_parity_writes = 0;
-  int total_local_parity_reads = 0;
-  int total_local_parity_writes = 0;
+  unsigned long total_local_parity_reads = 0;
+  unsigned long total_local_parity_writes = 0;
   int total_obsolete_data_reads = 0;
   int total_absent_data_reads = 0;
   int total_valid_obj_transfers = 0;
@@ -55,7 +55,7 @@ struct eh_result {
 struct sim_metric {
   int gc_amplification = 0;
   int total_obsolete = 0;
-  int total_used_space = 0;
+  unsigned long total_used_space = 0;
   vector<double> obs_percentages = vector<double>();
   double max_obs_perc = 0;
   double gc_ratio = 0;
@@ -78,7 +78,7 @@ struct sim_metric {
   int total_leftovers = 0;
   double ave_exts_gced = 0;
   unordered_map<string, int> types = unordered_map<string, int>();
-  unordered_map<string, int> cost_by_ext = unordered_map<string, int>();
+  unordered_map<string, double> cost_by_ext = unordered_map<string, double>();
   unordered_map<string, int> obs_by_ext_types = unordered_map<string, int>();
   gc_ext_type_num_map gced_by_type = gc_ext_type_num_map();
 };
@@ -96,7 +96,7 @@ class DataCenter {
   shared_ptr<EventManager> event_mngr;
   shared_ptr<GarbageCollectionStrategy> gc_strategy;
   shared_ptr<StripingProcessCoordinator> coordinator;
-  unordered_map<string, int> obs_by_ext_types;
+  unordered_map<string, long double> obs_by_ext_types;
 
 public:
   DataCenter(unsigned long max_size, float striping_cycle,
@@ -112,7 +112,7 @@ public:
         ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
         gc_strategy(gc_strategy), coordinator(coordinator),
         simul_time(simul_time), gc_cycle(gc_cycle), gced_space(0),
-        obs_by_ext_types(unordered_map<string, int>()),
+        obs_by_ext_types(unordered_map<string, long double>()),
         stripe_mngr(stripe_mngr) {}
 
   /*
@@ -193,7 +193,7 @@ public:
         gc_stripes_set.insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());
         added_obsolete_this_gc += dr.total_added_obsolete;
-
+        // cout << "added_obsolete_this_gc " << added_obsolete_this_gc << endl;
         // Since garbage collection has to wait for gc cycle need to
         // add how long the data sits around before the garbage
         // collection kicks in to the obsolete data metric.
@@ -430,20 +430,16 @@ public:
 
     int total_gc_by_type = 0;
     for (auto it : gc_bandwidth_by_key) {
-      if (!it.second)
-        ret.cost_by_ext[it.first] = 0;
-      else
-        ret.cost_by_ext[it.first] = it.second / total_user_bandwidth;
+      ret.cost_by_ext[it.first] = it.second / total_user_bandwidth;
       total_gc_by_type += ret.cost_by_ext[it.first];
-      cout << "Cost per ext for " << it.first << ": "
-           << ret.cost_by_ext[it.first] << endl;
+      printf("Cost per ext for %s: %.6f\n", it.first.c_str(), ret.cost_by_ext[it.first]);
     }
-
+    unsigned long total_obs = 0;
     double total_obs_percent = 0;
     for (auto &it : this->obs_by_ext_types) {
-      ret.total_obsolete += it.second;
-      it.second = ((float)it.second / ret.total_used_space) * 100;
-      cout << "Obs \% per ext for " << it.first << ": " << it.second << endl;
+      total_obs += it.second;
+      it.second = (it.second * 100.0 / ret.total_used_space);
+      printf( "Obs %% per ext for %s: %.6Lf \n", it.first.c_str(), it.second);
       total_obs_percent += it.second;
     }
 

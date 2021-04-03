@@ -19,7 +19,7 @@ typedef unordered_map<string, int> space_ext_type_map;
 using std::set;
 
 struct gc_handler_ret {
-  short reclaimed_space = 0, total_user_reads = 0, total_user_writes = 0,
+  unsigned long reclaimed_space = 0, total_user_reads = 0, total_user_writes = 0,
         total_global_parity_reads = 0, total_global_parity_writes = 0,
         total_local_parity_reads = 0, total_local_parity_writes = 0,
         total_obsolete_data_reads = 0, total_absent_data_reads = 0,
@@ -30,7 +30,7 @@ struct gc_handler_ret {
   ;
 };
 struct stripe_gc_ret {
-  short temp_space = 0, user_reads = 0, user_writes = 0,
+  unsigned long temp_space = 0, user_reads = 0, user_writes = 0,
         global_parity_reads = 0, global_parity_writes = 0,
         local_parity_reads = 0, local_parity_writes = 0,
         obsolete_data_reads = 0, absent_data_reads = 0, valid_obj_transfers = 0,

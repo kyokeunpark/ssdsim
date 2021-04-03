@@ -150,7 +150,7 @@ public:
     if (it != objects->end()) {
       objects->erase(it);
     }
-    return obsolete_space / ext_size;
+    return obsolete_space / ext_size * 100;
   }
 
   object_lst delete_ext() {
@@ -210,7 +210,7 @@ public:
   self.obsolete += obsolete*/
   double update_obsolete(double obsolete) {
     this->obsolete += obsolete;
-    return this->obsolete / stripe_size * 100;
+    return this->obsolete;
   }
 
   double get_obsolete_percentage() { return obsolete / stripe_size * 100; }
