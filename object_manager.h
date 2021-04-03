@@ -3,14 +3,13 @@
 #include "event_manager.h"
 #include "extent_object_stripe.h"
 #include "samplers.h"
-#include "striping_process_coordinator.h"
 #include <memory>
 #include <random>
 #include <unordered_map>
 
 using std::shared_ptr;
 using std::unordered_map;
-using obj_record = std::pair<ExtentObject *, int>;
+using obj_record = std::pair<ExtentObject *, float>;
 using object_lst = std::vector<obj_record>;
 
 class ObjectManager {
@@ -38,12 +37,12 @@ public:
     sizes size_samples = size_age_samples.first;
     lives life_samples = size_age_samples.second;
     for (int i = 0; i < size_samples.size(); i++) {
-      int size = size_samples[i];
-      int life = life_samples[i];
+      float size = size_samples[i];
+      float life = life_samples[i];
       int noise = rand() % 25;
       if (add_noise) {
         noise -= 12;
-        life += noise / 24;
+        life += noise / 24.0;
       }
       life += configtime;
       ExtentObject *obj = new ExtentObject(max_id, size, life);

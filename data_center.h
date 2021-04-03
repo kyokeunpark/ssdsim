@@ -1,6 +1,7 @@
 #ifndef __DATA_CENTER_H_
 #define __DATA_CENTER_H_
 
+#include <cstdio>
 #pragma once
 
 #include "config.h"
@@ -31,7 +32,7 @@ struct eh_result {
   int total_reclaimed_space = 0;
   int total_obsolete = 0;
   int total_used_space = 0;
-  int dc_size = 0;
+  unsigned long dc_size = 0;
   int total_leftovers = 0;
   unsigned long total_global_parity_reads = 0;
   unsigned long total_global_parity_writes = 0;
@@ -73,7 +74,7 @@ struct sim_metric {
   int num_objs = 0;
   int num_exts = 0;
   int num_stripes = 0;
-  int dc_size = 0;
+  unsigned long dc_size = 0;
   int total_leftovers = 0;
   double ave_exts_gced = 0;
   unordered_map<string, int> types = unordered_map<string, int>();
@@ -98,7 +99,7 @@ class DataCenter {
   unordered_map<string, int> obs_by_ext_types;
 
 public:
-  DataCenter(int max_size, int striping_cycle,
+  DataCenter(unsigned long max_size, float striping_cycle,
              shared_ptr<AbstractStriperDecorator> striper,
              shared_ptr<StripeManager> stripe_mngr,
              shared_ptr<ExtentManager> ext_mngr,
@@ -122,13 +123,13 @@ public:
   del_result del_object(ExtentObject *obj) {
     del_result ret;
     auto ext_lst = obj->extents;
-    std::reverse(ext_lst.begin(), ext_lst.end());
+    //  std::reverse(ext_lst.begin(), ext_lst.end());
     for (auto ex : ext_lst) {
       // cout << ex->type << endl;
       obj->remove_extent(ex);
 
       // Size of obj in extent
-      int temp = ex->get_obj_size(obj);
+      float temp = ex->get_obj_size(obj);
       this->gced_space += temp;
       ex->del_object(obj);
 
@@ -174,10 +175,9 @@ public:
     unordered_map<string, int> net_obs_by_ext_type =
         unordered_map<string, int>();
     ExtentObject *next_del_obj = nullptr;
-
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
-      // cout << "next_del_time" << next_del_time << "configtime"<< configtime << endl;
+      // printf("config %.6f simultime %.6f\n", configtime, this->simul_time);
       int added_obsolete_this_gc = 0;
       unordered_map<string, int> added_obsolete_by_type =
           unordered_map<string, int>();
@@ -188,6 +188,7 @@ public:
       // Find all candidates for GC
       set<Stripe *> gc_stripes_set = set<Stripe *>();
       while (next_del_time <= configtime && !event_mngr->empty()) {
+        // printf("next_del_time %.6f configtime %.6f\n", next_del_time, configtime);
         del_result dr = this->del_object(next_del_obj);
         gc_stripes_set.insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());
@@ -212,6 +213,7 @@ public:
         }
 
         if (!this->event_mngr->empty()) {
+          // cout << event_mngr->events->size() << endl;
           auto e = this->event_mngr->events->top();
           this->event_mngr->events->pop();
           next_del_time = std::get<0>(e);
@@ -219,7 +221,6 @@ public:
         }
       }
       this->event_mngr->put_event(next_del_time, next_del_obj);
-
       auto gc_ret = this->gc_strategy->gc_handler(gc_stripes_set);
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();

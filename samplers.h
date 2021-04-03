@@ -48,7 +48,7 @@ class SimpleSampler : public Sampler {
 public:
   SimpleSampler(float sim_time) : Sampler(sim_time) {}
 
-  sample_pair get_size_age_sample(const int num_samples = 1) {
+  sample_pair get_size_age_sample(const int num_samples = 1) override {
     return sample_pair(this->sample_size(num_samples),
                        this->sample_life(num_samples));
   }
@@ -111,7 +111,6 @@ private:
 
     for (int i = 0; i < num_samples; i++) {
       double temp = real_dist(generator);
-      // std::cout << "life" << temp << std::endl;
       if (temp < 5)
         lives_lst.emplace_back(1);
       else if (temp < 9)

@@ -29,7 +29,7 @@ create_managers(const int num_data_exts, const int num_local_parities,
                 const int num_global_parities, const int num_localities,
                 const shared_ptr<SimpleSampler> sampler, const int ext_size,
                 float (Extent::*key_fnc)(), const float coding_overhead = 0,
-                const bool add_noise = false) {
+                const bool add_noise = true) {
   shared_ptr<StripeManager> stripe_mngr;
   if (coding_overhead != 0) {
     stripe_mngr = make_shared<StripeManager>(num_data_exts, num_local_parities,
@@ -65,7 +65,7 @@ inline DataCenter stripe_level_with_no_exts_config(
       mngrs = create_managers(num_data_exts, num_local_parities,
                               num_global_parities, num_localities, sampler,
                               ext_size, &Extent::get_default_key,
-                              coding_overhead, false);
+                              coding_overhead);
   shared_ptr<StripeManager> stripe_mngr =
       std::get<shared_ptr<StripeManager>>(mngrs);
   shared_ptr<ExtentManager> ext_mngr =

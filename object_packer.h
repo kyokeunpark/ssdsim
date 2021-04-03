@@ -135,9 +135,9 @@ public:
    */
   string get_extent_type(Extent *extent) {
     // Find the largest object stored in the extent
-    int largest_obj = INT32_MIN, local_max = 0;
+    float largest_obj = -1, local_max = 0;
     for (auto &tuple : extent->obj_ids_to_obj_size) {
-      std::vector<int> sizes = tuple.second;
+      std::vector<float> sizes = tuple.second;
       local_max = std::accumulate(sizes.begin(), sizes.end(), 0);
       if (largest_obj < local_max) {
         largest_obj = local_max;
@@ -212,8 +212,8 @@ public:
 
   virtual void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, int obj_rem_size, int key) {
-    int temp = 0;
+                                ExtentObject *obj, float obj_rem_size, int key) {
+    float temp = 0;
     if (this->current_exts.find(key) == this->current_exts.end())
       this->current_exts[key] = this->ext_manager->create_extent();
     Extent *current_ext = this->current_exts[key];
@@ -295,7 +295,7 @@ public:
             std::set<ExtentObject *>& objs) override {
     for (auto obj_kv : *(ext->objects)) {
       auto obj = obj_kv.first;
-      int size = ext->get_obj_size(obj);
+      float size = ext->get_obj_size(obj);
       // fprintf(stderr, "gc ext %f %d %d", configtime, obj->id, size);
       this->add_obj(obj_record(obj, size));
     }
@@ -327,7 +327,7 @@ public:
                     int key = 0) override{
     std::vector<ExtentObject *> objs_lst = {};
     for (auto &record : *obj_pool) {
-      int rem_size = record.second;
+      float rem_size = record.second;
       for (int i = 0; i < rem_size / 4; i++)
         objs_lst.emplace_back(record.first);
     }
@@ -354,7 +354,7 @@ public:
                     int key = 0) override {
     std::vector<ExtentObject *> objs_lst = {};
     for (auto &it : *obj_pool) {
-      int rem_size = it.second;
+      float rem_size = it.second;
       for (int i = 0; i < rem_size / 4; i++)
         objs_lst.emplace_back(it.first);
     }
@@ -401,8 +401,8 @@ public:
     if (new_objs_added) {
       object_lst obj_lst = {};
       for (auto &record : *obj_pool) {
-        int rem_size = record.second;
-        for (int i = 0; i < rem_size / 4 + round((rem_size % 4) / 4.0); i++)
+        float rem_size = record.second;
+        for (int i = 0; i < rem_size / 4 + round((fmod(rem_size, 4)) / 4.0); i++)
           obj_lst.emplace_back(std::make_pair(record.first, 4));
         obj_pool->clear(); // TODO: Might not be necessary?
         this->obj_pool = obj_lst;
@@ -445,8 +445,8 @@ public:
     // Mix valid and fresh objects
     object_lst obj_lst = {};
     for (auto &record : *obj_pool) {
-      int rem_size = record.second;
-      for (int i = 0; i < rem_size / 4.0 + round((rem_size % 4) / 4.0); i++)
+      float rem_size = record.second;
+      for (int i = 0; i < rem_size / 4.0 + round(fmod(rem_size, 4) / 4.0); i++)
         obj_lst.emplace_back(std::make_pair(record.first, 4));
     }
     obj_pool->clear();
@@ -661,9 +661,9 @@ class SizeBasedObjectPacker : public virtual SimpleObjectPacker {
 public:
   using SimpleObjectPacker::SimpleObjectPacker;
 
-  void adjust_index(int &ind, int &length) {
-    ind = min(ind, length - 1);
-    ind = max(0, ind);
+  void adjust_index(int &ind, float &length) {
+    ind = ind < length - 1 ?ind:length - 1;
+    ind = ind > 0 ? ind: 0;
   }
 
   int get_smaller_obj_index(int ext_size, int free_space) {
@@ -696,7 +696,7 @@ public:
     return ind;
   }
 
-  void insert_obj_back_into_pool(ExtentObject *obj, int obj_size) {
+  void insert_obj_back_into_pool(ExtentObject *obj, float obj_size) {
     if (obj_pool->size() == 0) {
       obj_pool->emplace_back(std::make_pair(obj, obj_size));
       return;
@@ -725,7 +725,7 @@ public:
 
   std::pair<int, Extent *>
   add_obj_to_current_ext(shared_ptr<AbstractExtentStack> extent_stack,
-                         ExtentObject *obj, int obj_rem_size, int key) {
+                         ExtentObject *obj, float obj_rem_size, int key) {
     auto current_ext = this->current_exts[key];
     auto tmp = current_ext->add_object(obj, obj_rem_size);
 
@@ -743,7 +743,7 @@ public:
 
   stack_val
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, int obj_rem_size, int key,
+                                ExtentObject *obj, float obj_rem_size, int key,
                                 ext_stack obj_ids_to_exts) {
     stack_val exts = stack_val();
     if (this->current_exts.find(key) == this->current_exts.end())
@@ -831,7 +831,7 @@ public:
     for (auto mapping : obj_ids_to_exts)
       abs_ext_stack->add_extent(mapping.second);
   }
-  void insert_obj_back_into_pool(ExtentObject *obj, int obj_size) {
+  void insert_obj_back_into_pool(ExtentObject *obj, float obj_size) {
     if (obj_pool->size() == 0) {
       obj_pool->emplace_back(std::make_pair(obj, obj_size));
       return;
@@ -951,10 +951,10 @@ public:
         std::advance(it, ind);
         obj_record r = *it.base();
         SizeBasedObjectPackerSmallerWholeObj::obj_pool->erase(it);
-        int obj_rem_size = r.second;
+        float obj_rem_size = r.second;
         if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          int obj_original_size = r.second;
+          float obj_original_size = r.second;
           obj_rem_size = (1 - threshold / 100.0) * current_ext->ext_size;
           insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
         }
@@ -1023,7 +1023,7 @@ public:
         std::advance(it, ind);
         obj_record r = *it.base();
         SizeBasedObjectPackerSmallerWholeObj::obj_pool->erase(it);
-        int obj_rem_size = r.second;
+        float obj_rem_size = r.second;
 
         stack_val exts =
             SizeBasedObjectPackerSmallerWholeObj::add_obj_to_current_ext_at_key(
@@ -1076,10 +1076,10 @@ public:
         std::advance(it, ind);
         obj_record r = *it.base();
         SizeBasedObjectPackerSmallerWholeObj::obj_pool->erase(it);
-        int obj_rem_size = r.second;
+        float obj_rem_size = r.second;
         if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          int obj_original_size = r.second;
+          float obj_original_size = r.second;
           obj_rem_size = (0.99 - threshold / 100.0) * current_ext->ext_size;
           insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
           add_obj_to_current_ext_at_key(extent_stack, r.first, obj_rem_size,
@@ -1128,10 +1128,10 @@ public:
         std::advance(it, ind);
         obj_record r = *it.base();
         SizeBasedObjectPackerSmallerWholeObj::obj_pool->erase(it);
-        int obj_rem_size = r.second;
+        float obj_rem_size = r.second;
         if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          int obj_original_size = r.second;
+          float obj_original_size = r.second;
           obj_rem_size = (0.99 - threshold / 100.0) * current_ext->ext_size;
           insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
           add_obj_to_current_ext_at_key(extent_stack, r.first, obj_rem_size,
@@ -1180,10 +1180,10 @@ public:
         std::advance(it, ind);
         obj_record r = *it.base();
         obj_pool->erase(it);
-        int obj_rem_size = r.second;
+        float obj_rem_size = r.second;
         if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          int obj_original_size = r.second;
+          float obj_original_size = r.second;
           obj_rem_size = (0.99 - threshold / 100.0) * current_ext->ext_size;
           insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
           add_obj_to_current_ext_at_key(extent_stack, r.first, obj_rem_size,
@@ -1194,7 +1194,7 @@ public:
   }
   std::pair<int, Extent *>
   add_obj_to_current_ext(shared_ptr<AbstractExtentStack> extent_stack,
-                         ExtentObject *obj, int obj_rem_size, int key) {
+                         ExtentObject *obj, float obj_rem_size, int key) {
     auto current_ext = this->current_exts[key];
     auto tmp = current_ext->add_object(obj, obj_rem_size);
 
@@ -1211,7 +1211,7 @@ public:
   }
   stack_val
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, int obj_rem_size, int key,
+                                ExtentObject *obj, float obj_rem_size, int key,
                                 ext_stack obj_ids_to_exts) {
     stack_val exts = stack_val();
     if (this->current_exts.find(key) == this->current_exts.end())
@@ -1315,14 +1315,14 @@ public:
 
   void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, int obj_rem_size,
+                                ExtentObject *obj, float obj_rem_size,
                                 int key) override {
-    int temp = 0;
+    float temp = 0;
     if (current_exts.find(key) == current_exts.end()) {
       current_exts[key] = ext_manager->create_extent();
     }
     Extent *current_extent = current_exts[key];
-    int rem_size = obj_rem_size;
+    float rem_size = obj_rem_size;
     while (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
       temp = current_extent->add_object(obj, obj_rem_size);
       rem_size = rem_size - temp;
@@ -1420,14 +1420,14 @@ public:
 
   void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, int obj_rem_size,
+                                ExtentObject *obj, float obj_rem_size,
                                 int key) override {
-    int temp = 0;
+    float temp = 0;
     if (current_exts.find(key) == current_exts.end()) {
       current_exts[key] = ext_manager->create_extent();
     }
     Extent *current_extent = current_exts[key];
-    int rem_size = obj_rem_size;
+    float rem_size = obj_rem_size;
     while (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
       temp = current_extent->add_object(obj, obj_rem_size);
       rem_size = rem_size - temp;

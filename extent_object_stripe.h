@@ -15,14 +15,14 @@ using std::list;
 using std::string;
 using std::unordered_map;
 using std::vector;
-using obj_record = std::pair<ExtentObject *, int>;
+using obj_record = std::pair<ExtentObject *, float>;
 using object_lst = std::vector<obj_record>;
 
 class ExtentObject {
 protected:
 public:
   int id;
-  int size;
+  float size;
   double life;
   int generation;
   time_t creation_time;
@@ -30,7 +30,7 @@ public:
   list<Extent_Object_Shard *> *shards;
   list<Extent *> extents;
 
-  ExtentObject(int id, int s, float l)
+  ExtentObject(int id, float s, float l)
       : id(id), size(s), life(l), generation(0), num_times_gced(0),
         creation_time(time(nullptr)), shards(new list<Extent_Object_Shard *>()),
         extents(list<Extent *>()) {}
@@ -41,8 +41,8 @@ public:
 
   bool operator<(const ExtentObject &other) { return this->id < other.id; }
 
-  int get_size() {
-    int sum = 0;
+  float get_size() {
+    float sum = 0;
     for (auto shard : *this->shards)
       sum += shard->shard_size;
     return sum;
@@ -73,7 +73,7 @@ public:
   double ext_size;
 
   unordered_map<ExtentObject *, list<Extent_Object_Shard *>> *objects;
-  unordered_map<int, vector<int>> obj_ids_to_obj_size;
+  unordered_map<int, vector<float>> obj_ids_to_obj_size;
   Stripe *stripe;
   int locality;
   int generation;
@@ -98,15 +98,15 @@ public:
 
   double get_age() { return difftime(time(nullptr), timestamp); }
 
-  int get_obj_size(ExtentObject *obj) {
+  float get_obj_size(ExtentObject *obj) {
     auto sizes = this->obj_ids_to_obj_size[obj->id];
     return std::accumulate(sizes.begin(), sizes.end(), 0);
   }
 
   double get_obsolete_percentage() { return obsolete_space / ext_size * 100; }
 
-  int add_object(ExtentObject *obj, int size, int generation = 0) {
-    int temp_size = size < free_space ? size : free_space;
+  float add_object(ExtentObject *obj, float size, int generation = 0) {
+    float temp_size = size < free_space ? size : free_space;
     int obj_id = obj->id;
     if (!timestamp)
       timestamp = obj->creation_time;
@@ -157,7 +157,7 @@ public:
     object_lst ret;
 
     for (auto &it : *objects) {
-      int sum = 0;
+      float sum = 0;
       for (Extent_Object_Shard *s : it.second) {
         sum += s->shard_size;
         ret.push_back(std::make_pair(it.first, sum));

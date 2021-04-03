@@ -7,7 +7,6 @@
 #include "stripers.h"
 #include <any>
 #include <memory>
-using std::cout, std::cerr, std::endl;
 class StripingProcessCoordinator {
 public:
   shared_ptr<SimpleObjectPacker> object_packer;
@@ -53,7 +52,7 @@ public:
     }
   }
   str_costs stripe_generator(shared_ptr<AbstractStriperDecorator> striper,
-                             shared_ptr<SimpleObjectPacker> objecct_packer,
+                             shared_ptr<SimpleObjectPacker> object_packer,
                              shared_ptr<AbstractExtentStack> extent_stack) {
     object_packer->generate_stripes(extent_stack, simulation_time);
     return striper->create_stripes(extent_stack, simulation_time);
