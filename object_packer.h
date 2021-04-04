@@ -41,7 +41,6 @@ inline bool obj_record_less(const obj_record &p1, const obj_record p2) {
     return p1.first < p2.first;
   return p1.second < p2.second;
 };
-static std::mt19937_64 rd = std::mt19937_64(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 /* Interface for ObjectPackers to follow
  */
 class ObjectPacker {
@@ -120,7 +119,8 @@ public:
   void remove_extent_from_current_extents(Extent *extent) {
     for (auto &ext : this->current_exts) {
       if (ext.second == extent) {
-        this->current_exts.erase(ext.first);
+        std::cout << ext.first << std::endl;
+        current_exts[ext.first] = ext_manager->create_extent();
         return;
       }
     }
@@ -224,7 +224,7 @@ public:
 
       // Seal the extent if the extent is full
       if (obj_rem_size > 0 ||
-          (obj_rem_size == 0 && current_ext->free_space == 0)) {
+          (obj_rem_size == 0 && current_ext->free_space <= 0)) {
         this->update_extent_type(current_ext);
         current_ext->type = this->get_extent_type(current_ext);
 
@@ -296,7 +296,6 @@ public:
     for (auto obj_kv : *(ext->objects)) {
       auto obj = obj_kv.first;
       float size = ext->get_obj_size(obj);
-      // fprintf(stderr, "gc ext %f %d %d", configtime, obj->id, size);
       this->add_obj(obj_record(obj, size));
     }
     this->pack_objects(extent_stack, objs);
@@ -604,7 +603,7 @@ public:
       int key = immortal_key;
       auto obj = obj_pool->front();
       obj_pool->erase(obj_pool->begin());
-      p = unif(rd);
+      p = unif(rng);
 
       if ((obj.first->life <= 365 && p <= this->percent_correct) ||
           obj.first->life > 365 && p > this->percent_correct)
@@ -644,7 +643,7 @@ public:
       int key = immortal_key;
       auto obj = obj_pool->front();
       obj_pool->erase(obj_pool->begin());
-      p = unif(rd);
+      p = unif(rng);
 
       if ((obj.first->life <= 365 && p <= this->percent_correct) ||
           obj.first->life > 365 && p > this->percent_correct)

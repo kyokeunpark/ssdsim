@@ -138,18 +138,16 @@ public:
     for (auto obj : *this->objects)
       obj.first->remove_extent(this);
     this->objects->clear();
+    this->obj_ids_to_obj_size.clear();
   }
 
-  double del_object(ExtentObject *obj) {
-    double sum = 0;
+  double del_object(ExtentObject *obj) { 
     auto it = objects->find(obj);
-    for (Extent_Object_Shard *s : it->second) {
-      sum += s->shard_size;
-    }
-    obsolete_space += sum;
+    obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(), obj_ids_to_obj_size[obj->id].end(), 0);
     if (it != objects->end()) {
       objects->erase(it);
     }
+    obj_ids_to_obj_size.erase(obj->id);
     return obsolete_space / ext_size * 100;
   }
 
@@ -163,6 +161,7 @@ public:
         ret.push_back(std::make_pair(it.first, sum));
       }
     }
+    
     delete objects;
     objects = new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>();
     generation = 0;
@@ -191,8 +190,9 @@ public:
         num_localities(num_localities),
         free_space(num_localities * num_data_extents_per_locality),
         localities(new vector<int>(num_localities, 0)), ext_size(ext_size),
-        timestamp(0), stripe_size(0), primary_threshold(primary_threshold),
+        timestamp(0), primary_threshold(primary_threshold),
         extents(list<Extent *>()) {
+    this->stripe_size = 0;
     for (int i = 0; i < num_data_blocks * num_localities; ++i) {
       this->stripe_size += ext_size;
     }

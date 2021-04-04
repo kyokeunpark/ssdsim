@@ -28,10 +28,10 @@ public:
         num_localities_in_stripe(num_localities_in_stripe), max_id(1) {
 
     num_exts_per_stripe =
-        num_data_exts_per_locality * num_localities_in_stripe +
+        num_data_extents * num_localities_in_stripe +
         num_local_parities + num_global_parities;
     num_data_exts_per_stripe =
-        num_data_exts_per_locality * num_localities_in_stripe;
+        num_data_extents * num_localities_in_stripe;
     if (coding_overhead == 0.0) {
       this->coding_overhead = (num_global_parities + num_local_parities +
                                num_data_exts_per_stripe) /

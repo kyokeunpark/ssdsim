@@ -17,7 +17,7 @@ using lives = std::vector<float>;
 using sample_pair = std::pair<sizes, lives>;
 static std::mt19937 generator;
 static inline int randint(int min, int max) {
-  return (rand() % ((max + 1) + min)) + min;
+  return (rand() % ((max + 1) - min)) + min;
 }
 
 /*
@@ -65,7 +65,7 @@ private:
     
     for (int i = 0; i < num_samples; i++) {
       double temp = real_dist(generator);
-      // std::cout << "size" << temp << std::endl;
+      
       if (temp < 50)
         sizes_lst.emplace_back(randint(4, 10));
       else if (temp < 65)

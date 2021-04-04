@@ -86,9 +86,10 @@ struct sim_metric {
 class DataCenter {
 
   unsigned long max_size;
-  int gced_space;
+  double gced_space;
   float simul_time;
   float striping_cycle, gc_cycle;
+
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
   shared_ptr<ExtentManager> ext_mngr;
@@ -324,6 +325,12 @@ public:
          << endl;
     cout << "Number of stripes in dc: " << this->stripe_mngr->get_num_stripes()
          << endl;
+    // cout << "Max objects in dc: " << this->obj_mngr->max_id
+    //      << endl;
+    // cout << "Max extents in dc: " << this->ext_mngr->max_id
+    //      << endl;
+    // cout << "Maxstripes in dc: " << this->stripe_mngr->max_id
+    //      << endl;
     cout << "Ave number of exts gc'ed per cycle "
          << ret.total_exts_gced / ((configtime)*1 / this->striping_cycle)
          << endl;
@@ -376,8 +383,7 @@ public:
         (ret.total_user_data_writes - ret.total_user_data_reads);
 
     ret.total_gc_bandwidth = ret.total_bandwidth - total_user_bandwidth;
-    cout << "Parity reads, parity writes " << ret.parity_reads << ", "
-         << ret.parity_writes << endl;
+    printf("Parity reads, parity writes %f %f\n", ret.parity_reads, ret.parity_writes);
 
     if (ret.total_reclaimed_space > 0)
       ret.gc_amplification = ret.total_gc_bandwidth / ret.total_reclaimed_space;

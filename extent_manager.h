@@ -19,6 +19,7 @@ public:
   int get_num_ext() { return exts.size(); }
 
   Extent *create_extent(int s = 0, int secondary_threshold = 15) {
+    max_id++;
     Extent *e;
     if (!s) {
       e = new Extent(ext_size, secondary_threshold);
