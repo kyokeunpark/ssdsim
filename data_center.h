@@ -201,7 +201,6 @@ public:
     ExtentObject *next_del_obj = nullptr;
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
-      // printf("config %.6f simultime %.6f\n", configtime, this->simul_time);
       double added_obsolete_this_gc = 0;
       unordered_map<string, double> added_obsolete_by_type =
           unordered_map<string, double>();
@@ -212,12 +211,10 @@ public:
       // Find all candidates for GC
       set<Stripe *> gc_stripes_set = set<Stripe *>();
       while (next_del_time <= configtime && !event_mngr->empty()) {
-        // printf("next_del_time %.6f configtime %.6f\n", next_del_time, configtime);
         del_result dr = this->del_object(next_del_obj);
         gc_stripes_set.insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());
         added_obsolete_this_gc += dr.total_added_obsolete;
-        // cout << "added_obsolete_this_gc " << added_obsolete_this_gc << endl;
         // Since garbage collection has to wait for gc cycle need to
         // add how long the data sits around before the garbage
         // collection kicks in to the obsolete data metric.
@@ -237,7 +234,6 @@ public:
         }
 
         if (!this->event_mngr->empty()) {
-          // cout << event_mngr->events->size() << endl;
           auto e = this->event_mngr->events->top();
           this->event_mngr->events->pop();
           next_del_time = std::get<0>(e);
@@ -279,24 +275,26 @@ public:
           ret.total_reclaimed_space_by_ext_type[it.first] += it.second;
       }
       for (auto it : this->obs_by_ext_types) {
-        if (net_obs_by_ext_type.find(it.first) != net_obs_by_ext_type.end() &&
-            gc_ret.total_reclaimed_space_by_ext_type.find(it.first) !=
-                gc_ret.total_reclaimed_space_by_ext_type.end())
-          net_obs_by_ext_type[it.first] +=
-              added_obsolete_by_type[it.first] -
-              gc_ret.total_reclaimed_space_by_ext_type[it.first];
-        else if (net_obs_by_ext_type.find(it.first) !=
-                 net_obs_by_ext_type.end())
-          net_obs_by_ext_type[it.first] += added_obsolete_by_type[it.first];
-        else if (gc_ret.total_reclaimed_space_by_ext_type.find(it.first) !=
-                 gc_ret.total_reclaimed_space_by_ext_type.end())
-          net_obs_by_ext_type[it.first] =
-              added_obsolete_by_type[it.first] -
-              gc_ret.total_reclaimed_space_by_ext_type[it.first];
+        const string type = it.first;
+        auto net_obs_it = net_obs_by_ext_type.find(type);
+        auto total_rec_it = gc_ret.total_reclaimed_space_by_ext_type.find(type);
+
+        if (net_obs_it != net_obs_by_ext_type.end() &&
+            total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
+          net_obs_by_ext_type[type] +=
+              added_obsolete_by_type[type] -
+              gc_ret.total_reclaimed_space_by_ext_type[type];
+        else if (net_obs_it != net_obs_by_ext_type.end())
+          net_obs_by_ext_type[type] += added_obsolete_by_type[type];
+        else if (total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
+          net_obs_by_ext_type[type] =
+              added_obsolete_by_type[type] -
+              gc_ret.total_reclaimed_space_by_ext_type[type];
         else
-          net_obs_by_ext_type[it.first] = added_obsolete_by_type[it.first];
-        this->obs_by_ext_types[it.first] +=
-            net_obs_by_ext_type[it.first] * this->gc_cycle;
+          net_obs_by_ext_type[type] = added_obsolete_by_type[type];
+
+        this->obs_by_ext_types[type] +=
+            net_obs_by_ext_type[type] * this->gc_cycle;
       }
 
       if (next_del_obj)
@@ -337,9 +335,6 @@ public:
       configtime += this->gc_cycle;
 
       ret.dc_size = this->stripe_mngr->get_total_dc_size();
-
-      // if (next_del_obj)
-      //   std::cout << next_del_obj->id << std::endl;
     }
 
     cout << "Number of objects in dc: " << this->obj_mngr->get_num_objs()
@@ -348,12 +343,6 @@ public:
          << endl;
     cout << "Number of stripes in dc: " << this->stripe_mngr->get_num_stripes()
          << endl;
-    // cout << "Max objects in dc: " << this->obj_mngr->max_id
-    //      << endl;
-    // cout << "Max extents in dc: " << this->ext_mngr->max_id
-    //      << endl;
-    // cout << "Maxstripes in dc: " << this->stripe_mngr->max_id
-    //      << endl;
     cout << "Ave number of exts gc'ed per cycle "
          << ret.total_exts_gced / ((configtime)*1 / this->striping_cycle)
          << endl;

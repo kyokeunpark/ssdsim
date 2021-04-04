@@ -176,6 +176,7 @@ public:
     ret.global_parity_writes = parity_writes / 2;
     ret.local_parity_writes = parity_writes / 2;
     ret.user_writes = ret.user_reads;
+    ret.reclaimed_space_by_ext_types = reclaimed_space_by_ext_types;
     return ret;
   }
 
