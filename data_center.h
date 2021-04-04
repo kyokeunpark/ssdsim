@@ -34,10 +34,10 @@ struct eh_result {
    unsigned long total_used_space = 0;
   unsigned long dc_size = 0;
   int total_leftovers = 0;
-  unsigned long total_global_parity_reads = 0;
-  unsigned long total_global_parity_writes = 0;
-  unsigned long total_local_parity_reads = 0;
-  unsigned long total_local_parity_writes = 0;
+  double total_global_parity_reads = 0;
+  double total_global_parity_writes = 0;
+  double total_local_parity_reads = 0;
+  double total_local_parity_writes = 0;
   int total_obsolete_data_reads = 0;
   int total_absent_data_reads = 0;
   int total_valid_obj_transfers = 0;
@@ -46,7 +46,7 @@ struct eh_result {
   int total_exts_gced = 0;
   int new_obj_writes = 0;
   int new_obj_reads = 0;
-  int striper_parities = 0;
+  double striper_parities = 0;
   unordered_map<string, int> total_reclaimed_space_by_ext_type =
       unordered_map<string, int>();
 };
@@ -60,10 +60,10 @@ struct sim_metric {
   double max_obs_perc = 0;
   double gc_ratio = 0;
   int total_reclaimed_space = 0;
-  unsigned long parity_reads = 0;
-  unsigned long parity_writes = 0;
-  int total_user_data_reads = 0;
-  int total_user_data_writes = 0;
+  double parity_reads = 0;
+  double parity_writes = 0;
+  double total_user_data_reads = 0;
+  double total_user_data_writes = 0;
   double total_gc_bandwidth = 0;
   double total_bandwidth = 0;
   int total_absent_data_reads = 0;
@@ -373,7 +373,7 @@ public:
     ret.parity_writes =
         (eh.total_global_parity_writes + eh.total_local_parity_writes +
          eh.striper_parities) -
-        (ret.total_user_data_writes + ret.total_user_data_reads);
+        (ret.total_user_data_writes - ret.total_user_data_reads);
 
     ret.total_gc_bandwidth = ret.total_bandwidth - total_user_bandwidth;
     cout << "Parity reads, parity writes " << ret.parity_reads << ", "
