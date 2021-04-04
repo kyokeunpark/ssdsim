@@ -310,6 +310,7 @@ public:
     }
     add_num_exts_gced(ret.num_exts_replaced);
     add_localities_in_gc(local_parities.size());
+    ret.reclaimed_space_by_ext_types = reclaimed_space_by_ext_types;
 
     if (ret.temp_space > 0) {
       repl_costs costs = gc_striper->cost_to_replace_extents(
@@ -418,6 +419,7 @@ public:
       }
       add_num_exts_gced(ret.num_exts_replaced);
       add_localities_in_gc(local_parities.size());
+      ret.reclaimed_space_by_ext_types = reclaimed_space_by_ext_types;
       if (ret.temp_space > 0) {
         // return stripe_manager->delete_stripe(stripe);
       }
