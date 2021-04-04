@@ -13,8 +13,8 @@
 #include <vector>
 
 typedef unordered_map<string, float> ext_type_cost_map;
-typedef unordered_map<string, short> obj_ext_type_map;
-typedef unordered_map<string, short> gc_ext_type_num_map;
+typedef unordered_map<string, int> obj_ext_type_map;
+typedef unordered_map<string, int> gc_ext_type_num_map;
 typedef unordered_map<string, int> space_ext_type_map;
 using std::set;
 
@@ -123,7 +123,7 @@ public:
     for (Extent *ext : extent_list) {
       assert(ext->get_obsolete_percentage() <= 100);
       ret.temp_space += ext->obsolete_space;
-      short valid_objs = ext->ext_size - ext->obsolete_space;
+      double valid_objs = ext->ext_size - ext->obsolete_space;
       if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
         ext_types_to_cost[ext->type] += valid_objs * 2;
         valid_objs_by_ext_type[ext->type] += valid_objs;
@@ -153,7 +153,7 @@ public:
     }
     add_num_exts_gced(ret.num_exts_replaced);
     add_localities_in_gc(local_parities.size());
-    if (ret.temp_space == 0) {
+    if (ret.temp_space <= 0) {
       return ret;
     }
     stripe_manager->delete_stripe(stripe);
@@ -474,8 +474,8 @@ public:
       int user_reads = stripe_res.reads;
       int user_writes = stripe_res.writes;
       int parity_writes = user_writes - user_reads;
-      ret.total_global_parity_writes += parity_writes / 2;
-      ret.total_local_parity_writes += parity_writes / 2;
+      ret.total_global_parity_writes += parity_writes / 2.0;
+      ret.total_local_parity_writes += parity_writes / 2.0;
       user_writes = user_reads;
       ret.total_user_writes += user_writes;
       ret.total_user_reads += user_reads;

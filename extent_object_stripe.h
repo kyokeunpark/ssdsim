@@ -68,7 +68,7 @@ public:
 class Extent {
 public:
   double obsolete_space;
-  int free_space;
+  double free_space;
   int id;
   double ext_size;
 
@@ -108,12 +108,12 @@ public:
   float add_object(ExtentObject *obj, float size, int generation = 0) {
     float temp_size = size < free_space ? size : free_space;
     int obj_id = obj->id;
-    if (!timestamp)
+    if (timestamp == 0)
       timestamp = obj->creation_time;
     else if (obj->creation_time < timestamp)
       timestamp = obj->creation_time;
 
-    if (!generation)
+    if (this->generation == 0)
       this->generation = obj->generation;
     else if (generation > this->generation)
       this->generation = obj->generation;
@@ -121,6 +121,8 @@ public:
     if (this->obj_ids_to_obj_size.find(obj_id) !=
         this->obj_ids_to_obj_size.end()) {
       this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
+      Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
+      obj->shards->push_back(new_shard);
     } else {
       this->obj_ids_to_obj_size[obj_id] = {temp_size};
       Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
@@ -158,12 +160,13 @@ public:
       float sum = 0;
       for (Extent_Object_Shard *s : it.second) {
         sum += s->shard_size;
-        ret.push_back(std::make_pair(it.first, sum));
       }
+      ret.push_back(std::make_pair(it.first, sum));
     }
     
-    delete objects;
-    objects = new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>();
+    objects->clear();
+    obj_ids_to_obj_size.clear();
+
     generation = 0;
     free_space = ext_size;
     return ret;
@@ -218,7 +221,7 @@ public:
   int get_num_data_exts() { return num_data_blocks * num_localities; }
 
   void add_extent(Extent *ext) {
-    if (free_space) {
+    if (free_space > 0) {
       extents.push_back(ext);
       ext->stripe = this;
       free_space -= 1;

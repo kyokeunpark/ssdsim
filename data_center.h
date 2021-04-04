@@ -2,6 +2,8 @@
 #define __DATA_CENTER_H_
 
 #include <cstdio>
+#include <ios>
+#include <numeric>
 #pragma once
 #include <iomanip>
 #include "config.h"
@@ -20,11 +22,33 @@
 using std::cout, std::cerr, std::endl;
 using std::set;
 using std::unordered_map;
+inline std::ostream &operator<<(std::ostream &os,  unordered_map<string, double> &dict) {
+  os<< "{";
+  int count = 0;
+  for(auto kv:dict)
+  {
+    if(count != 0)
+    {
+      os << ",";
+    }
+    os <<std::setprecision(5) << std::fixed << "\'" << kv.first << "\': " << kv.second;
+    ++count;
+  }
+  os << "}" << endl;
+  return os;
+}
 
+inline double sum_map_string_double(unordered_map<string, double>const &map )
+{
+  return std::accumulate(map.begin(), map.end(), 0,
+              [] (int value, const std::map<string, double>::value_type& p)
+                   { return value + p.second; }
+              );
+}
 struct del_result {
-  int total_added_obsolete = 0;
+  double total_added_obsolete = 0;
   set<Stripe *> gc_stripes_set = set<Stripe *>();
-  unordered_map<string, int> ext_types = unordered_map<string, int>();
+  unordered_map<string, double> ext_types = unordered_map<string, double>();
 };
 
 // Event handler result
@@ -59,7 +83,7 @@ struct sim_metric {
   vector<double> obs_percentages = vector<double>();
   double max_obs_perc = 0;
   double gc_ratio = 0;
-  int total_reclaimed_space = 0;
+  double total_reclaimed_space = 0;
   double parity_reads = 0;
   double parity_writes = 0;
   double total_user_data_reads = 0;
@@ -76,15 +100,14 @@ struct sim_metric {
   int num_stripes = 0;
   unsigned long dc_size = 0;
   int total_leftovers = 0;
-  double ave_exts_gced = 0;
+  double ave_exts_gced = 0; 
   unordered_map<string, int> types = unordered_map<string, int>();
   unordered_map<string, double> cost_by_ext = unordered_map<string, double>();
-  unordered_map<string, int> obs_by_ext_types = unordered_map<string, int>();
+  unordered_map<string, long double> obs_by_ext_types = unordered_map<string, long double>();
   gc_ext_type_num_map gced_by_type = gc_ext_type_num_map();
 };
 
 class DataCenter {
-
   unsigned long max_size;
   double gced_space;
   float simul_time;
@@ -166,22 +189,22 @@ public:
   eh_result event_handler() {
     eh_result ret;
     configtime = 0.0;
-    int net_obsolete = 0;
-    int used_space = 0;
+    double net_obsolete = 0;
+    double used_space = 0;
     double daily_max_perc = 0.0;
     double obs_perc = -1.0;
     double obs_timestamp = -1.0;
     float next_del_time = this->simul_time + 1.0;
     vector<double> obs_percentages = vector<double>();
-    unordered_map<string, int> net_obs_by_ext_type =
-        unordered_map<string, int>();
+    unordered_map<string, double> net_obs_by_ext_type =
+        unordered_map<string, double>();
     ExtentObject *next_del_obj = nullptr;
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
       // printf("config %.6f simultime %.6f\n", configtime, this->simul_time);
-      int added_obsolete_this_gc = 0;
-      unordered_map<string, int> added_obsolete_by_type =
-          unordered_map<string, int>();
+      double added_obsolete_this_gc = 0;
+      unordered_map<string, double> added_obsolete_by_type =
+          unordered_map<string, double>();
 
       for (auto it : this->obs_by_ext_types)
         added_obsolete_by_type[it.first] = 0;
@@ -257,19 +280,19 @@ public:
       }
       for (auto it : this->obs_by_ext_types) {
         if (net_obs_by_ext_type.find(it.first) != net_obs_by_ext_type.end() &&
-            ret.total_reclaimed_space_by_ext_type.find(it.first) !=
-                ret.total_reclaimed_space_by_ext_type.end())
+            gc_ret.total_reclaimed_space_by_ext_type.find(it.first) !=
+                gc_ret.total_reclaimed_space_by_ext_type.end())
           net_obs_by_ext_type[it.first] +=
               added_obsolete_by_type[it.first] -
-              ret.total_reclaimed_space_by_ext_type[it.first];
+              gc_ret.total_reclaimed_space_by_ext_type[it.first];
         else if (net_obs_by_ext_type.find(it.first) !=
                  net_obs_by_ext_type.end())
           net_obs_by_ext_type[it.first] += added_obsolete_by_type[it.first];
-        else if (ret.total_reclaimed_space_by_ext_type.find(it.first) !=
-                 ret.total_reclaimed_space_by_ext_type.end())
+        else if (gc_ret.total_reclaimed_space_by_ext_type.find(it.first) !=
+                 gc_ret.total_reclaimed_space_by_ext_type.end())
           net_obs_by_ext_type[it.first] =
               added_obsolete_by_type[it.first] -
-              ret.total_reclaimed_space_by_ext_type[it.first];
+              gc_ret.total_reclaimed_space_by_ext_type[it.first];
         else
           net_obs_by_ext_type[it.first] = added_obsolete_by_type[it.first];
         this->obs_by_ext_types[it.first] +=
@@ -289,7 +312,7 @@ public:
       ret.total_used_space += used_space * this->striping_cycle;
       ret.new_obj_writes += str_result.writes;
       ret.new_obj_reads += str_result.reads;
-
+      
       ret.striper_parities += (str_result.writes - str_result.reads);
 
       used_space = this->stripe_mngr->get_data_dc_size();
@@ -298,7 +321,7 @@ public:
       obs_perc = -1;
       if (used_space > 0)
         obs_perc =
-            (added_obsolete_this_gc + net_obsolete) / (double)used_space * 100;
+            (added_obsolete_this_gc + net_obsolete) / used_space * 100;
       obs_perc = std::max(obs_perc, daily_max_perc);
 
       // Keep a record of the daily maximum obsolete percentage, ignore
@@ -391,6 +414,11 @@ public:
       ret.gc_amplification = 0;
 
     ret.gc_ratio = ret.total_gc_bandwidth / total_user_bandwidth;
+
+    printf("Total reclaimed space %.0f\n", ret.total_reclaimed_space);
+    printf("Total deleted %.0f\n", this->gced_space);
+    printf("Total data size of dc %.0f\n", stripe_mngr->get_data_dc_size());
+    printf("GC bandwidth %.0f\n", ret.total_gc_bandwidth);
     ret.gced_by_type = this->gc_strategy->get_gc_ed_exts_by_type();
 
     ret.types = this->coordinator->get_extent_types();
@@ -403,6 +431,7 @@ public:
       if (eh.total_reclaimed_space_by_ext_type.find(it.first) !=
           eh.total_reclaimed_space_by_ext_type.end())
         user_reads += eh.total_reclaimed_space_by_ext_type[it.first];
+      
       user_writes = user_reads * coding_overhead;
       user_bandwidth_by_ext_type[it.first] = user_reads + user_writes;
     }
@@ -427,10 +456,9 @@ public:
              ret.types[key] * this->ext_mngr->ext_size * coding_overhead);
       gc_bandwidth_by_key[key] =
           total_bandwidth_by_key[key] - user_bandwidth_by_ext_type[key];
-      ret.total_gc_bandwidth = gc_bandwidth_by_key[key];
-      ret.total_bandwidth = total_bandwidth_by_key[key];
     }
-
+    cout << total_bandwidth_by_key << ret.total_bandwidth << " " << sum_map_string_double(total_bandwidth_by_key) << endl;
+    cout << ret.total_gc_bandwidth << " " <<  sum_map_string_double(gc_bandwidth_by_key) << endl;
     // TODO: Need a tostring operator for unordered_map<string, double> to
     //       print some of the metric we have currently
 
@@ -454,3 +482,5 @@ public:
 };
 
 #endif // __DATA_CENTER_H_
+
+
