@@ -16,9 +16,8 @@
 #include <queue>
 #include <variant>
 
-using std::cout, std::cerr, std::endl;
+using std::cout, std::endl;
 using std::make_shared;
-using std::map;
 using std::static_pointer_cast;
 using object_lst = std::vector<obj_record>;
 using obj_pq = std::priority_queue<std::variant<obj_record, obj_pq_record>>;
@@ -114,9 +113,9 @@ inline DataCenter no_exts_mix_objs_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -155,11 +154,7 @@ inline DataCenter no_exts_mix_objs_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /* TODO
-      gc_strategy =MixObjStripeLevelStrategy(primary_threshold,
-     secondary_threshold, coordinator, ext_mngr, gc_striper)
-      */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  auto gc_strategy = make_shared<MixObjStripeLevelStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -212,9 +207,9 @@ inline DataCenter stripe_level_with_extents_separate_pools_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /*TODO
       gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold,
-     secondary_threshold, coordinator, ext_mngr, gc_striper)
+     secondary_threshold, ext_mngr, coordinator, gc_striper)
       */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy =  make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -262,11 +257,7 @@ inline DataCenter stripe_level_with_extents_separate_pools_efficient_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /*TODO
-      gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold,
-     secondary_threshold, coordinator, ext_mngr, gc_striper)
-      */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -283,9 +274,9 @@ inline DataCenter age_based_config_no_exts(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -323,9 +314,9 @@ inline DataCenter age_based_config_no_exts(
           gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
   /*TODO
   gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+  secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -334,7 +325,7 @@ inline DataCenter age_based_config_no_exts(
   return data_center;
 }
 
-float get_time() { return configtime; }
+inline float get_time() { return configtime; }
 
 inline DataCenter age_based_config(
     const unsigned long data_center_size, const float striping_cycle,
@@ -375,11 +366,10 @@ inline DataCenter age_based_config(
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time, get_time);
-  /*TODO
-  gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
-  */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  /*  python code non existent GC strategy??????
+  gc_strategy = StripeLevelWithExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, 
+    ext_mngr, coordinator, gc_striper, StripeLevelGCStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper))*/
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -394,9 +384,9 @@ inline DataCenter size_based_stripe_level_no_exts_baseline_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -435,9 +425,9 @@ inline DataCenter size_based_stripe_level_no_exts_baseline_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /*TODO
   gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+  secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -446,16 +436,16 @@ inline DataCenter size_based_stripe_level_no_exts_baseline_config(
   return data_center;
 }
 
-DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
+inline DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
     const unsigned long data_center_size, const float striping_cycle,
     const float simul_time, const int ext_size, const short primary_threshold,
     const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -494,9 +484,9 @@ DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /*TODO
   gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+  secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy =  make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
 
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
@@ -513,9 +503,9 @@ inline DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -552,13 +542,14 @@ inline DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /*TODO
+  /*python code non existent gc strategy??????????
 gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper,
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr,
 StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator,
 ext_mngr, gc_striper))
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold,
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -615,11 +606,12 @@ inline DataCenter size_based_whole_obj_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /*TODO
   gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper,
+  secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr,
   StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator,
   ext_mngr, gc_striper))
       */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold,
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -634,9 +626,9 @@ inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -677,11 +669,12 @@ inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /*TODO
 gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper,
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr,
 StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator,
 ext_mngr, gc_striper))
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold,
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -705,9 +698,9 @@ inline DataCenter mortal_immortal_no_exts_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -755,9 +748,9 @@ int s_t, float (*key)()*/
           gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
   /*TODO
 gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -811,9 +804,9 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
           gc_extent_stack, stripe_mngr, simul_time);
   /* TODO
   gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, gc_striper)
+  secondary_threshold, ext_mngr, coordinator, gc_striper)
       */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -866,14 +859,15 @@ inline DataCenter randomized_obj_placement_joined_pools_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /* TODO
+  /* python code non existent gc strategy??????????
   gc_strategy =
   StripeLevelWithExtsGarbageCollectionStrategy(primary_threshold,
-  secondary_threshold, coordinator, ext_mngr, gc_striper,
+  secondary_threshold, ext_mngr, coordinator, gc_striper,
   StripeLevelGCStrategy(primary_threshold, secondary_threshold, coordinator,
   ext_mngr, gc_striper))
       */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -889,9 +883,9 @@ inline DataCenter randomized_objs_no_exts_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -932,11 +926,10 @@ inline DataCenter randomized_objs_no_exts_config(
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time, get_immortal_key);
-  /*TODO
-gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+  /*python code non existent gc strategy??????????
+    gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr, StripeLevelGCStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper))
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -952,9 +945,9 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs, const int percent_correct) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -994,12 +987,8 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  // TODO
-  // gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-  //                                           secondary_threshold,
-  //                                           coordinator, ext_mngr,
-  //                                           stripe_mngr, gc_striper)
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  /* gc_strategy =MixObjStripeLevelStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper)*/
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<MixObjStripeLevelStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -1015,9 +1004,9 @@ inline DataCenter age_based_rand_config_no_exts(
     const short num_stripes_per_cycle, const float deletion_cycle,
     const int num_objs) {
   int num_data_exts = 1;
-  float coding_overhead = 18 / 14;
-  float num_global_parities = 2 / 14;
-  float num_local_parities = 2 / 14;
+  float coding_overhead = 18.0 / 14;
+  float num_global_parities = 2.0 / 14;
+  float num_local_parities = 2.0 / 14;
   int num_localities = 1;
   std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
              shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
@@ -1056,11 +1045,10 @@ inline DataCenter age_based_rand_config_no_exts(
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
-  /*TODO
-gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+  /*python code non existent gc strategy??????????
+    gc_strategy = StripeLevelNoExtsGarbageCollectionStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr, StripeLevelGCStrategy(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper))
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
@@ -1069,7 +1057,7 @@ secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
   return data_center;
 }
 
-int default_key() { return 0; }
+inline int default_key() { return 0; }
 
 inline DataCenter generational_config(
     const unsigned long data_center_size, const float striping_cycle,
@@ -1118,9 +1106,9 @@ inline DataCenter generational_config(
           gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
   /*TODO
 gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, coordinator, ext_mngr, stripe_mngr, gc_striper)
+secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
   */
-  shared_ptr<GarbageCollectionStrategy> gc_strategy = nullptr;
+  shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy> (primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,

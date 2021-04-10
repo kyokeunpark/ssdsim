@@ -42,7 +42,7 @@ class GarbageCollectionStrategy {
 protected:
   short primary_threshold, secondary_threshold;
   shared_ptr<ExtentManager> extent_manager;
-  shared_ptr<StriperWithEC> gc_striper;
+  shared_ptr<AbstractStriper> gc_striper;
   shared_ptr<StripingProcessCoordinator> striping_process_coordinator;
   short num_gc_cycles, num_exts_gced, num_localities_in_gc;
   ext_type_cost_map ext_types_to_cost;
@@ -53,7 +53,7 @@ public:
   GarbageCollectionStrategy(short p_thresh, short s_thresh,
                             shared_ptr<ExtentManager> eman,
                             shared_ptr<StripingProcessCoordinator> s_p_c,
-                            shared_ptr<StriperWithEC> striper)
+                            shared_ptr<AbstractStriper> striper)
       : primary_threshold(p_thresh), secondary_threshold(s_thresh),
         extent_manager(eman), striping_process_coordinator(s_p_c),
         gc_striper(striper) {
@@ -100,7 +100,7 @@ public:
   StripeLevelNoExtsGCStrategy(short p_thresh, short s_thresh,
                               shared_ptr<ExtentManager> eman,
                               shared_ptr<StripingProcessCoordinator> s_p_c,
-                              shared_ptr<StriperWithEC> striper,
+                              shared_ptr<AbstractStriper> striper,
                               shared_ptr<StripeManager> s_m)
       : GarbageCollectionStrategy(p_thresh, s_thresh, eman, s_p_c, striper),
         stripe_manager(s_m) {}
@@ -367,7 +367,9 @@ public:
     return ret;
   };
 
-  class MixObjStripeLevelStrategy : public GarbageCollectionStrategy {
+ 
+};
+ class MixObjStripeLevelStrategy : public GarbageCollectionStrategy {
   public:
     using GarbageCollectionStrategy::GarbageCollectionStrategy;
 
@@ -485,5 +487,4 @@ public:
       return ret;
     }
   };
-};
 #endif // __GC_STRATEGIES_H_
