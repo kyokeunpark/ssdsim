@@ -802,10 +802,7 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /* TODO
-  gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold,
-  secondary_threshold, ext_mngr, coordinator, gc_striper)
-      */
+
   shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
