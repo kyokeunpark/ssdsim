@@ -73,6 +73,7 @@ struct eh_result {
   double striper_parities = 0;
   unordered_map<string, int> total_reclaimed_space_by_ext_type =
       unordered_map<string, int>();
+  vector<double> obs_percentages = vector<double>();
 };
 
 // Run simulator metric
@@ -320,7 +321,7 @@ public:
       if (used_space > 0)
         obs_perc =
             (added_obsolete_this_gc + net_obsolete) / used_space * 100;
-      obs_perc = std::max(obs_perc, daily_max_perc);
+      daily_max_perc = std::max(obs_perc, daily_max_perc);
 
       // Keep a record of the daily maximum obsolete percentage, ignore
       // the first month since the data center is too small at that point
@@ -333,7 +334,6 @@ public:
       }
 
       configtime += this->gc_cycle;
-
       ret.dc_size = this->stripe_mngr->get_total_dc_size();
     }
 
@@ -346,14 +346,14 @@ public:
     cout << "Ave number of exts gc'ed per cycle "
          << ret.total_exts_gced / ((configtime)*1 / this->striping_cycle)
          << endl;
-
+    ret.obs_percentages = obs_percentages;
     return ret;
   }
 
   sim_metric run_simulation() {
     sim_metric ret;
     eh_result eh = this->event_handler();
-
+    ret.obs_percentages = eh.obs_percentages;
     ret.total_obsolete = eh.total_obsolete;
     ret.dc_size = eh.dc_size;
     ret.total_used_space = eh.total_used_space;
