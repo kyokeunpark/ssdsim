@@ -7,6 +7,7 @@
 #include "striping_process_coordinator.h"
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -371,7 +372,17 @@ public:
 };
  class MixObjStripeLevelStrategy : public GarbageCollectionStrategy {
   public:
-    using GarbageCollectionStrategy::GarbageCollectionStrategy;
+    protected:
+    shared_ptr<StripeManager> stripe_manager;
+
+  public:
+    MixObjStripeLevelStrategy(short p_thresh, short s_thresh,
+                                shared_ptr<ExtentManager> eman,
+                                shared_ptr<StripingProcessCoordinator> s_p_c,
+                                shared_ptr<AbstractStriper> striper,
+                                shared_ptr<StripeManager> s_m)
+        : GarbageCollectionStrategy(p_thresh, s_thresh, eman, s_p_c, striper),
+          stripe_manager(s_m) {}
 
     stripe_gc_ret stripe_gc(Stripe *stripe) override {
       stripe_gc_ret ret;
@@ -391,7 +402,7 @@ public:
       for (Extent *ext : extent_list) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
-        short valid_objs = ext->ext_size - ext->obsolete_space;
+        double valid_objs = ext->ext_size - ext->obsolete_space;
         if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
           ext_types_to_cost[ext->type] += valid_objs * 2;
           valid_objs_by_ext_type[ext->type] += valid_objs;
@@ -412,7 +423,7 @@ public:
         striping_process_coordinator->gc_extent(ext, objs);
         exts_per_locality[ext->locality] += 1;
         obs_data_per_locality[ext->locality] += ext->obsolete_space;
-        if (local_parities.find(ext->locality) != local_parities.end()) {
+        if (local_parities.find(ext->locality) == local_parities.end()) {
           local_parities.insert(ext->locality);
         }
         ret.num_exts_replaced += 1;
@@ -423,7 +434,7 @@ public:
       add_localities_in_gc(local_parities.size());
       ret.reclaimed_space_by_ext_types = reclaimed_space_by_ext_types;
       if (ret.temp_space > 0) {
-        // return stripe_manager->delete_stripe(stripe);
+        stripe_manager->delete_stripe(stripe);
       }
       return ret;
     }
@@ -473,17 +484,17 @@ public:
       striping_process_coordinator->generate_objs(ret.reclaimed_space);
       striping_process_coordinator->pack_exts(ret.total_num_exts_replaced);
       for (int i = 0; i < ret.total_num_exts_replaced; ++i) {
+        str_costs stripe_res = striping_process_coordinator->get_stripe();
+        int num_stripes = stripe_res.stripes;
+        int user_reads = stripe_res.reads;
+        int user_writes = stripe_res.writes;
+        int parity_writes = user_writes - user_reads;
+        ret.total_global_parity_writes += parity_writes / 2.0;
+        ret.total_local_parity_writes += parity_writes / 2.0;
+        user_writes = user_reads;
+        ret.total_user_writes += user_writes;
+        ret.total_user_reads += user_reads;
       }
-      str_costs stripe_res = striping_process_coordinator->get_stripe();
-      int num_stripes = stripe_res.stripes;
-      int user_reads = stripe_res.reads;
-      int user_writes = stripe_res.writes;
-      int parity_writes = user_writes - user_reads;
-      ret.total_global_parity_writes += parity_writes / 2.0;
-      ret.total_local_parity_writes += parity_writes / 2.0;
-      user_writes = user_reads;
-      ret.total_user_writes += user_writes;
-      ret.total_user_reads += user_reads;
       return ret;
     }
   };
