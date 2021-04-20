@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iterator>
 #include <random>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -28,12 +29,13 @@ class Sampler {
 protected:
   float sim_time;
   unsigned seed;
-  
+  std::string name;
 public:
   Sampler(float sim_time) {
     this->sim_time = sim_time;
     this->seed = std::chrono::system_clock::now().time_since_epoch().count();
     generator = std::mt19937(this->seed);
+    this->name = "abstract";
   }
 
   /*
@@ -41,12 +43,13 @@ public:
    * @param: sim_time float
    */
   virtual sample_pair get_size_age_sample(const int num_samples = 1) = 0;
+  operator std::string() const{return name;};
 };
 
 class SimpleSampler : public Sampler {
 
 public:
-  SimpleSampler(float sim_time) : Sampler(sim_time) {}
+  SimpleSampler(float sim_time) : Sampler(sim_time) {this->name = "simple";}
 
   sample_pair get_size_age_sample(const int num_samples = 1) override {
     return sample_pair(this->sample_size(num_samples),
@@ -138,6 +141,7 @@ public:
   DeterministicDistributionSampler(float sim_time) : SimpleSampler(sim_time) {
     this->seed = 0;
     srand(0);
+    this->name = "Deterministic";
   }
 };
 
@@ -150,6 +154,11 @@ public:
 class WeibullSampler : public DeterministicDistributionSampler {
 
 public:
+  WeibullSampler(float sim_time) : DeterministicDistributionSampler(sim_time) {
+    this->seed = 0;
+    srand(0);
+    this->name = "Weibull";
+  }
   lives sample_life(const int num_samples) {
     lives lives_lst = lives();
     float a = 0.3;
@@ -169,7 +178,7 @@ public:
     this->turn = 0;
   }
 
-  sample_pair get_size_age_sample(const int num_samples) {
+  sample_pair get_size_age_sample(const int num_samples) override {
     return sample_pair(this->sample_size(), this->sample_life());
   }
 
@@ -193,6 +202,7 @@ private:
       return {this->sim_time + 1};
     }
   }
+
 };
 
 /*
@@ -208,9 +218,10 @@ public:
     this->turn = 0;
   }
 
-  sample_pair get_size_age_sample(const int num_samples) {
+  sample_pair get_size_age_sample(const int num_samples) override {
     return sample_pair(this->sample_size(), this->sample_life());
   }
+  
 
 private:
   sizes sample_size() {
