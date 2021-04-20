@@ -32,6 +32,7 @@ public:
 
   // docstring and code doesnt match managers.py
   object_lst create_new_object(int num_samples = 1) {
+    // std::cout << "create_new_object" << num_samples << std::endl;
     object_lst new_objs = object_lst();
     auto size_age_samples = sampler->get_size_age_sample(num_samples);
     sizes size_samples = size_age_samples.first;

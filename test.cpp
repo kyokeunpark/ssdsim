@@ -705,7 +705,9 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
       make_shared<ObjectManager>(make_shared<EventManager>(),
                     make_shared<DeterministicDistributionSampler>(365));
   auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
-  auto o_p = make_shared<SimpleObjectPacker>(o_m, e_m, object_lst(), current_extents(), 10,
+  auto temp_op = object_lst();
+  auto temp_curr_ext = current_extents();
+  auto o_p = make_shared<SimpleObjectPacker>(o_m, e_m, temp_op, temp_curr_ext, 10,
       2, true);
   auto e_s = make_shared<SingleExtentStack<>>(s_m);
   Extent *e1 = e_m->create_extent(5);
