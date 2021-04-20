@@ -588,8 +588,8 @@ public:
 
   MortalImmortalObjectPacker(shared_ptr<ObjectManager> obj_manager,
                              shared_ptr<ExtentManager> ext_manager,
-                             object_lst obj_pool = object_lst(),
-                             current_extents current_exts = current_extents(),
+                             object_lst & obj_pool,
+                             current_extents & current_exts,
                              short num_objs_in_pool = 100, short threshold = 10,
                              float percent_correct = 100.0)
       : SimpleObjectPacker(obj_manager, ext_manager, obj_pool, current_exts,
