@@ -67,8 +67,8 @@ class GenericObjectPacker : public ObjectPacker {
 protected:
   shared_ptr<ObjectManager> obj_manager;
   shared_ptr<ExtentManager> ext_manager;
-  object_lst& obj_pool;
-  current_extents& current_exts;
+  object_lst obj_pool;
+  current_extents current_exts;
   ext_types_mgr ext_types;
   short threshold, num_objs_in_pool;
   bool record_ext_types;
@@ -77,8 +77,8 @@ public:
   GenericObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      object_lst& obj_pool,
-      current_extents& current_exts,
+      object_lst obj_pool,
+      current_extents current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false)
       : obj_manager(obj_manager), ext_manager(ext_manager), obj_pool(obj_pool),
@@ -588,8 +588,8 @@ public:
 
   MortalImmortalObjectPacker(shared_ptr<ObjectManager> obj_manager,
                              shared_ptr<ExtentManager> ext_manager,
-                             object_lst & obj_pool,
-                             current_extents & current_exts,
+                             object_lst obj_pool,
+                             current_extents current_exts,
                              short num_objs_in_pool = 100, short threshold = 10,
                              float percent_correct = 100.0)
       : SimpleObjectPacker(obj_manager, ext_manager, obj_pool, current_exts,
