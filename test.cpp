@@ -705,8 +705,8 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
       make_shared<ObjectManager>(make_shared<EventManager>(),
                     make_shared<DeterministicDistributionSampler>(365));
   auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
-  auto temp_op = object_lst();
-  auto temp_curr_ext = current_extents();
+  auto temp_op = make_shared<object_lst>();
+  auto temp_curr_ext = make_shared<current_extents>();
   auto o_p = make_shared<SimpleObjectPacker>(o_m, e_m, temp_op, temp_curr_ext, 10,
       2, true);
   auto e_s = make_shared<SingleExtentStack<>>(s_m);
@@ -730,7 +730,7 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
   EXPECT_EQ(e_s->get_extent_at_key(1), e1);
   EXPECT_EQ(e_s->get_extent_at_key(2), e2);
   EXPECT_EQ(e_s->get_extent_at_key(3), e4);
-  EXPECT_EQ(o_p->get_current_exts().size(), 1);
+  EXPECT_EQ(o_p->get_current_exts()->size(), 1);
 }
 
 int main(int argc, char **argv) {
