@@ -152,6 +152,8 @@ public:
   list<Extent *> pop_stripe_num_exts(int stripe_size) override {
     list<Extent *> ret;
     int num_left_to_add = stripe_size;
+    // std::cout << "num_left_to_add pop_stripe_num_exts singleES" << stripe_size << std::endl;
+    // std::cout << "get_length_of_extent_stack pop_stripe_num_exts singleES" << this->get_length_of_extent_stack() << std::endl;
     if (this->get_length_of_extent_stack() < num_left_to_add) {
       return ret;
     }
@@ -166,10 +168,8 @@ public:
      */
     auto it = this->extent_stack.begin();
     while (it != this->extent_stack.end()) {
-      for (int i = 0;
-           i < (it->second.size() > num_left_to_add ? num_left_to_add
-                                                   : it->second.size());
-           i++) {
+      int n =  it->second.size() > num_left_to_add ? num_left_to_add : it->second.size();
+      for (int i = 0; i < n; i++) {
         ret.push_back(it->second.front());
         it->second.erase(it->second.begin());
       }
@@ -178,7 +178,6 @@ public:
       }else {
         it++;
       }
-
       num_left_to_add = stripe_size - ret.size();
     }
     return ret;

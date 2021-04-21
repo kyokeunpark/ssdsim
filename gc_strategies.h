@@ -237,22 +237,22 @@ public:
   }
 
   struct gc_ext_res {
-    short user_reads;
-    short user_writes;
-    gc_ext_res(short r, short w) : user_reads(r), user_writes(w) {}
+    float user_reads;
+    float user_writes;
+    gc_ext_res(float r, float w) : user_reads(r), user_writes(w) {}
   };
   gc_ext_res gc_ext(Extent *ext, Stripe *stripe) {
     std::any key = extent_manager->get_key(ext);
     Extent *temp_ext =
-        striping_process_coordinator->get_gc_extent(std::any_cast<int>(key));
+        striping_process_coordinator->get_gc_extent(std::any_cast<float>(key));
     if (temp_ext == nullptr) {
       temp_ext =
-          striping_process_coordinator->get_extent(std::any_cast<int>(key));
+          striping_process_coordinator->get_extent(std::any_cast<float>(key));
     }
 
     stripe->add_extent(temp_ext);
-    short user_writes = ext->ext_size;
-    short user_reads = ext->ext_size;
+    float user_writes = ext->ext_size;
+    float user_reads = ext->ext_size;
 
     return gc_ext_res(user_writes, user_reads);
   }
@@ -277,7 +277,7 @@ public:
       if (filter_ext(ext)) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
-        short valid_objs = ext->ext_size - ext->obsolete_space;
+        double valid_objs = ext->ext_size - ext->obsolete_space;
         if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
           ext_types_to_cost[ext->type] += valid_objs * 2;
           valid_objs_by_ext_type[ext->type] += valid_objs;
@@ -298,7 +298,7 @@ public:
         striping_process_coordinator->gc_extent(ext, objs);
         exts_per_locality[ext->locality] += 1;
         obs_data_per_locality[ext->locality] += ext->obsolete_space;
-        if (local_parities.find(ext->locality) != local_parities.end()) {
+        if (local_parities.find(ext->locality) == local_parities.end()) {
           local_parities.insert(ext->locality);
         }
         ret.num_exts_replaced += 1;
@@ -317,6 +317,12 @@ public:
       repl_costs costs = gc_striper->cost_to_replace_extents(
           ext_size, exts_per_locality, obs_data_per_locality,
           valid_objs_per_locality);
+      ret.global_parity_reads = costs.global_parity_reads;
+      ret.global_parity_writes = costs.global_parity_writes;
+      ret.local_parity_reads = costs.local_parity_reads;
+      ret.local_parity_writes = costs.local_parity_writes;
+      ret.obsolete_data_reads = costs.obsolete_data_reads;
+      ret.absent_data_reads = costs.absent_data_reads;
       ret.storage_node_to_parity_calculator += costs.valid_obj_reads;
     }
     return ret;
