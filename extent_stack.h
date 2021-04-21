@@ -2,6 +2,7 @@
 #include "stripe_manager.h"
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <random>
@@ -86,6 +87,7 @@ public:
 
   virtual int get_length_at_key(int key) override {
     auto it = extent_stack.find(key);
+    std::cout << "is there extent at key" << (it == extent_stack.end())<<std::endl;
     return it == extent_stack.end() ? 0 : it->second.size();
   }
 

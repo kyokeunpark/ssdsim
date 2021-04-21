@@ -217,6 +217,7 @@ public:
     float temp = 0;
     if (this->current_exts.find(key) == this->current_exts.end())
       this->current_exts[key] = this->ext_manager->create_extent();
+    std::cout << "current_exts at key" << key <<current_exts[key]->id << std::endl;
     Extent *current_ext = this->current_exts[key];
 
     while (obj_rem_size > 0) {
@@ -534,14 +535,15 @@ public:
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     std::shuffle(obj_pool.begin(), obj_pool.end(),
                  rng);
-    // std::cout << "obj_pool_size before generate_exts_at_key" << obj_pool.size() << std::endl;
-    // std::cout << "num_exts_at_key" << num_exts_at_key << " " << key << std::endl;
-    // std::cout << "num_exts" << num_exts << std::endl;
+    std::cout << "obj_pool_size before generate_exts_at_key" << obj_pool.size() << std::endl;
+    std::cout << "num_exts_at_key" << num_exts_at_key << " " << key << std::endl;
+    std::cout << "num_exts" << num_exts << std::endl;
     while (num_exts_at_key < num_exts) {
-      auto obj = obj_pool.front();
+      std::cout << "num_exts_at_key in loop" << num_exts_at_key << " " << key << std::endl;
+      auto obj = obj_pool.back();
       this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second,
                                           key);
-      obj_pool.erase(obj_pool.begin());
+      obj_pool.pop_back();
       num_exts_at_key = extent_stack->get_length_at_key(key);
     }
   }
@@ -588,8 +590,8 @@ public:
 
   MortalImmortalObjectPacker(shared_ptr<ObjectManager> obj_manager,
                              shared_ptr<ExtentManager> ext_manager,
-                             object_lst obj_pool = object_lst(),
-                             current_extents current_exts = current_extents(),
+                             object_lst &obj_pool,
+                             current_extents &current_exts,
                              short num_objs_in_pool = 100, short threshold = 10,
                              float percent_correct = 100.0)
       : SimpleObjectPacker(obj_manager, ext_manager, obj_pool, current_exts,
@@ -630,8 +632,8 @@ class MortalImmortalGCObjectPacker : public SimpleGCObjectPacker {
 public:
   MortalImmortalGCObjectPacker(shared_ptr<ObjectManager> obj_manager,
                                shared_ptr<ExtentManager> ext_manager,
-                               object_lst obj_pool = object_lst(),
-                               current_extents current_exts = current_extents(),
+                               object_lst &obj_pool,
+                               current_extents &current_exts,
                                short num_objs_in_pool = 100,
                                short threshold = 10,
                                float percent_correct = 100.0)

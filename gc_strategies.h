@@ -480,6 +480,8 @@ public:
       for (Stripe *d : deleted) {
         stripe_set.erase(d);
       }
+      std::cout << "reclaimed_space" <<ret.reclaimed_space << std::endl;
+      std::cout << "total_num_exts_replaced" <<ret.total_num_exts_replaced << std::endl;
       striping_process_coordinator->generate_exts();
       striping_process_coordinator->generate_objs(ret.reclaimed_space);
       striping_process_coordinator->pack_exts(ret.total_num_exts_replaced);

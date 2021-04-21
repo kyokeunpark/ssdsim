@@ -210,10 +210,10 @@ public:
         added_obsolete_by_type[it.first] = 0;
 
       // Find all candidates for GC
-      set<Stripe *> gc_stripes_set = set<Stripe *>();
+      set<Stripe *> * gc_stripes_set = new set<Stripe *>();
       while (next_del_time <= configtime && !event_mngr->empty()) {
         del_result dr = this->del_object(next_del_obj);
-        gc_stripes_set.insert(dr.gc_stripes_set.begin(),
+        gc_stripes_set->insert(dr.gc_stripes_set.begin(),
                               dr.gc_stripes_set.end());
         added_obsolete_this_gc += dr.total_added_obsolete;
         // Since garbage collection has to wait for gc cycle need to
@@ -242,7 +242,8 @@ public:
         }
       }
       this->event_mngr->put_event(next_del_time, next_del_obj);
-      auto gc_ret = this->gc_strategy->gc_handler(gc_stripes_set);
+      auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
+      delete gc_stripes_set;
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();
         this->event_mngr->events->pop();
