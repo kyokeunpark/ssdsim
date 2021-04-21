@@ -91,7 +91,8 @@ TEST(StripeManagerTest, GetDataDcSizeANDGetTotalDataDcSize) {
   s_m.create_new_stripe(5);
   s_m.create_new_stripe(10);
   EXPECT_NEAR(s_m.get_data_dc_size(), 210, 0.1);
-  EXPECT_NEAR(s_m.get_total_dc_size(), 270, 0.1);
+  cout << "total data dc size: " << s_m.get_total_dc_size() << endl;
+  EXPECT_EQ(s_m.get_total_dc_size(), 0);
 };
 
 TEST(StripeManagerTest, GetDataDcSizeANDGetTotalDataDcSizeFLOATS) {
@@ -668,6 +669,30 @@ TEST(StriperTest, NumStripesStriperWithMultiExtentStack) {
   EXPECT_EQ(total.writes, 2002);
 }
 
+TEST(StriperTest, StriperWithECWithExtentStackRandomizer) {
+  int ext_size = 3*1024;
+  str_costs total = {0};
+  auto s_m = make_shared<StripeManager>(7, 2, 2, 2, 0.0);
+  auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
+  auto e_s = make_shared<ExtentStackRandomizer>(make_shared<SingleExtentStack<>>(s_m));
+  auto striper = make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
+                                          make_shared<SimpleStriper>(s_m, e_m)));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 1; j < 60; j++) {
+      auto e = e_m->create_extent(j);
+      e->timestamp = 123;
+      e_s->add_extent(i, e);
+    }
+  }
+
+  for (int i = 0; i < 3; i++) {
+    auto costs = striper->create_stripes(e_s, 365.0);
+    total += costs;
+  }
+
+  cout << total.stripes << ", " << total.reads << ", " << total.writes << endl;
+}
+
 
 /****************************************
  * ObjectPacker
@@ -680,8 +705,8 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
       make_shared<ObjectManager>(make_shared<EventManager>(),
                     make_shared<DeterministicDistributionSampler>(365));
   auto e_m = make_shared<ExtentManager>(ext_size, nullptr);
-  auto temp_op = object_lst();
-  auto temp_curr_ext = current_extents();
+  auto temp_op = make_shared<object_lst>();
+  auto temp_curr_ext = make_shared<current_extents>();
   auto o_p = make_shared<SimpleObjectPacker>(o_m, e_m, temp_op, temp_curr_ext, 10,
       2, true);
   auto e_s = make_shared<SingleExtentStack<>>(s_m);
@@ -705,7 +730,7 @@ TEST(ObjectPackerTest, SimpleObjectPacker) {
   EXPECT_EQ(e_s->get_extent_at_key(1), e1);
   EXPECT_EQ(e_s->get_extent_at_key(2), e2);
   EXPECT_EQ(e_s->get_extent_at_key(3), e4);
-  EXPECT_EQ(o_p->get_current_exts().size(), 1);
+  EXPECT_EQ(o_p->get_current_exts()->size(), 1);
 }
 
 int main(int argc, char **argv) {

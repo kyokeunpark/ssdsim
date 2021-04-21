@@ -79,10 +79,10 @@ inline DataCenter stripe_level_with_no_exts_config(
   shared_ptr<StriperWithEC> gc_striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents(); 
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>(); 
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
       primary_threshold, true);
@@ -142,9 +142,9 @@ inline DataCenter no_exts_mix_objs_config(
   shared_ptr<AbstractStriperDecorator> gc_striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-  static current_extents current_exts = current_extents();
-  current_exts.emplace(0, ext_mngr->create_extent());
-  static auto obj_pool = object_lst();
+  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
+  current_exts->emplace(0, ext_mngr->create_extent());
+  static auto obj_pool = make_shared<object_lst>();
   
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MixedObjObjectPacker>(
       obj_mngr, ext_mngr, obj_pool, current_exts, num_objs,
@@ -197,10 +197,10 @@ inline DataCenter stripe_level_with_extents_separate_pools_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-    static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+    static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
       primary_threshold, false);
@@ -255,10 +255,10 @@ inline DataCenter stripe_level_with_extents_separate_pools_efficient_config(
       make_shared<EfficientStriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-    static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+    static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs);
   shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
@@ -313,8 +313,8 @@ inline DataCenter age_based_config_no_exts(
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
   static auto temp_op = obj_pq();
   static auto temp_op_gc = obj_pq();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<AgeBasedObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
       primary_threshold);
@@ -374,8 +374,8 @@ inline DataCenter age_based_config(
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
   static auto temp_op = obj_pq();
   static auto temp_op_gc = obj_pq();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<AgeBasedObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs);
   shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
@@ -429,10 +429,10 @@ inline DataCenter size_based_stripe_level_no_exts_baseline_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<SizeBasedObjectPackerBaseline>(
           obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
@@ -492,10 +492,10 @@ inline DataCenter size_based_stripe_level_no_exts_smaller_obj_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<SizeBasedObjectPackerSmallerObj>(
           obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
@@ -556,10 +556,10 @@ inline DataCenter size_based_stripe_level_no_exts_dynamic_strategy_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<SizeBasedObjectPackerDynamicStrategy>(
           obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
@@ -620,10 +620,10 @@ inline DataCenter size_based_whole_obj_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<SizeBasedObjectPackerSmallerWholeObjFillGap>(
           obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
@@ -687,10 +687,10 @@ inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<SizeBasedObjectPackerLargerWholeObj>(
           obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
@@ -763,10 +763,10 @@ inline DataCenter mortal_immortal_no_exts_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<MortalImmortalObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                               temp_curr_exts, num_objs,
@@ -832,9 +832,9 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  current_extents current_exts;
-  current_exts.emplace(0, ext_mngr->create_extent());
-  static auto temp_op = object_lst();
+  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
+  current_exts->emplace(0, ext_mngr->create_extent());
+  auto temp_op = make_shared<object_lst>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<MixedObjObjectPacker>(
       obj_mngr, ext_mngr, temp_op, current_exts, num_objs);
   shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
@@ -848,10 +848,7 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time);
-  /* TODO
-  gc_strategy = StripeLevelWithExtsGCStrategy(primary_threshold,
-  secondary_threshold, ext_mngr, coordinator, gc_striper)
-      */
+
   shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelWithExtsGCStrategy>(primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
@@ -889,10 +886,10 @@ inline DataCenter randomized_obj_placement_joined_pools_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                           temp_curr_exts, num_objs,
@@ -958,10 +955,10 @@ inline DataCenter randomized_objs_no_exts_config(
   shared_ptr<AbstractStriperDecorator> gc_striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-  static auto temp_op = object_lst();
-  static auto temp_op_gc = object_lst();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                           temp_curr_exts, num_objs,
@@ -1021,9 +1018,9 @@ inline DataCenter randomized_objs_no_exts_mix_objs_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  current_extents current_exts;
-  current_exts.emplace(0, ext_mngr->create_extent());
-  static auto temp_op = object_lst();
+  auto current_exts = make_shared<current_extents>();
+  current_exts->emplace(0, ext_mngr->create_extent());
+  auto temp_op = make_shared<object_lst>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                           current_exts, num_objs,
@@ -1082,8 +1079,8 @@ inline DataCenter age_based_rand_config_no_exts(
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
   static auto temp_op = obj_pq();
   static auto temp_op_gc = obj_pq();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<AgeBasedRandomizedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                                   temp_curr_exts, num_objs,
@@ -1145,8 +1142,8 @@ inline DataCenter generational_config(
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
   static auto temp_op = obj_pq();
   static auto temp_op_gc = obj_pq();
-  static auto temp_curr_exts = current_extents();
-  static auto temp_curr_exts_gc = current_extents();
+  auto temp_curr_exts = make_shared<current_extents>();
+  auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<GenerationBasedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                                temp_curr_exts, num_objs,

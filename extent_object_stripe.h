@@ -87,8 +87,8 @@ public:
 
   float get_generation() { return generation; }
 
-  Extent(double e_s, int s_t)
-      : obsolete_space(0), free_space(e_s), ext_size(e_s),
+  Extent(double e_s, int s_t, int i)
+      : obsolete_space(0), free_space(e_s), ext_size(e_s), id(i),
         objects(
             new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>()),
         locality(0), generation(0), timestamp(0), type("0"),
