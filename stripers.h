@@ -5,7 +5,6 @@
 #include <array>
 #include <memory>
 
-using std::array;
 using std::shared_ptr;
 typedef struct stripe_costs {
   int stripes;
@@ -145,7 +144,11 @@ public:
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
                           float simulation_time) override {
-    return this->create_stripes(extent_stack, simulation_time);
+    int num_exts = stripe_manager->num_data_exts_per_stripe;
+    str_costs total = {0};
+    if (extent_stack->num_stripes(num_exts))
+      total += striper->create_stripes(extent_stack, simulation_time);
+    return total;
   }
 
   repl_costs cost_to_replace_extents(int ext_size, int exts_per_locality,
@@ -188,10 +191,10 @@ public:
 class StriperWithEC : public AbstractStriperDecorator {
 
 protected:
-  shared_ptr<AbstractStriperDecorator> striper;
+  shared_ptr<AbstractStriper> striper;
 
 public:
-  StriperWithEC(shared_ptr<AbstractStriperDecorator> s)
+  StriperWithEC(shared_ptr<AbstractStriper> s)
       : AbstractStriperDecorator(s), striper(s) {}
 
   int num_stripes_reqd() override { return striper->num_stripes_reqd(); }

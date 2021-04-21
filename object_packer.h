@@ -120,7 +120,6 @@ public:
   void remove_extent_from_current_extents(Extent *extent) {
     for (auto &ext : *this->current_exts) {
       if (ext.second == extent) {
-        std::cout << ext.first << std::endl;
         (*current_exts)[ext.first] = ext_manager->create_extent();
         return;
       }
@@ -217,19 +216,19 @@ public:
     float temp = 0;
     if (this->current_exts->find(key) == this->current_exts->end())
       this->current_exts->emplace(key, this->ext_manager->create_extent());
-    std::cout << "current_exts at key" << key <<(*current_exts)[key]->id << std::endl;
+    // std::cout << "current_exts at key" << key <<(*current_exts)[key]->id << std::endl;
     Extent *current_ext = (*this->current_exts)[key];
-
+    // std::cout << "obj_rem_size" << obj_rem_size << std::endl;
     while (obj_rem_size > 0) {
       temp = current_ext->add_object(obj, obj_rem_size);
+      // std::cout << "temp_size" << temp << std::endl;
       obj_rem_size -= temp;
-
+      // std::cout << "before seal obj_rem_size" << obj_rem_size << "current_ext->free_space" << current_ext->free_space << std::endl;
       // Seal the extent if the extent is full
       if (obj_rem_size > 0 ||
           (obj_rem_size == 0 && current_ext->free_space <= 0)) {
         this->update_extent_type(current_ext);
         current_ext->type = this->get_extent_type(current_ext);
-
         extent_stack->add_extent(key, (*this->current_exts)[key]);
         current_ext = this->ext_manager->create_extent();
         (*this->current_exts)[key] = current_ext;
@@ -535,9 +534,9 @@ public:
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     std::shuffle(obj_pool->begin(), obj_pool->end(),
                  rng);
-    std::cout << "obj_pool_size before generate_exts_at_key" << obj_pool->size() << std::endl;
-    std::cout << "num_exts_at_key" << num_exts_at_key << " " << key << std::endl;
-    std::cout << "num_exts" << num_exts << std::endl;
+    // std::cout << "obj_pool_size before generate_exts_at_key" << obj_pool->size() << std::endl;
+    // std::cout << "num_exts_at_key" << num_exts_at_key << " " << key << std::endl;
+    // std::cout << "num_exts" << num_exts << std::endl;
     while (num_exts_at_key < num_exts) {
       auto obj = obj_pool->front();
       this->add_obj_to_current_ext_at_key(extent_stack, obj.first, obj.second,

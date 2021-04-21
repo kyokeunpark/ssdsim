@@ -40,7 +40,7 @@ public:
     for (int i = 0; i < size_samples.size(); i++) {
       float size = size_samples[i];
       float life = life_samples[i];
-      int noise = rand() % 25;
+      int noise = randint(0, 24);
       if (add_noise) {
         noise -= 12;
         life += noise / 24.0;

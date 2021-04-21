@@ -140,8 +140,7 @@ inline DataCenter no_exts_mix_objs_config(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
 
   shared_ptr<AbstractStriperDecorator> gc_striper =
-      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
-          make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
+      make_shared<StriperWithEC>(make_shared<SimpleStriper>(stripe_mngr, ext_mngr));
   shared_ptr<current_extents> current_exts = make_shared<current_extents>();
   current_exts->emplace(0, ext_mngr->create_extent());
   static auto obj_pool = make_shared<object_lst>();

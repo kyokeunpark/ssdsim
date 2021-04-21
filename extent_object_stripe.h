@@ -127,10 +127,10 @@ public:
       this->obj_ids_to_obj_size[obj_id] = {temp_size};
       Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
       obj->shards->push_back(new_shard);
+      obj->add_extent(this);
       this->objects->emplace(
           std::make_pair(obj, list<Extent_Object_Shard *>()));
       this->objects->find(obj)->second.push_back(new_shard);
-      obj->add_extent(this);
     }
     free_space -= temp_size;
     return temp_size;
@@ -145,11 +145,12 @@ public:
 
   double del_object(ExtentObject *obj) { 
     auto it = objects->find(obj);
-    obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(), obj_ids_to_obj_size[obj->id].end(), 0);
+    
     if (it != objects->end()) {
+      obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(), obj_ids_to_obj_size[obj->id].end(), 0);
       objects->erase(it);
+      obj_ids_to_obj_size.erase(obj->id);
     }
-    obj_ids_to_obj_size.erase(obj->id);
     return obsolete_space / ext_size * 100;
   }
 
@@ -161,6 +162,7 @@ public:
       for (Extent_Object_Shard *s : it.second) {
         sum += s->shard_size;
       }
+      it.first->extents.remove(this);
       ret.push_back(std::make_pair(it.first, sum));
     }
     
@@ -240,6 +242,7 @@ public:
   }
 
   void del_extent(Extent *ext) {
+    ext->stripe = nullptr;
     ext->remove_objects();
     (*localities)[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;

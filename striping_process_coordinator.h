@@ -7,6 +7,7 @@
 #include "stripers.h"
 #include <any>
 #include <memory>
+using std::array;
 class StripingProcessCoordinator {
 public:
   shared_ptr<SimpleObjectPacker> object_packer;
@@ -43,6 +44,7 @@ public:
   virtual str_costs get_stripe(int key = 0) {
     int num_exts_per_stripe = stripe_manager->num_data_exts_per_stripe;
     int num_exts_at_key = extent_stack->get_length_at_key(key);
+    // std::cout << "get_length_of_extent_stack get_stripe" << num_exts_at_key << "num_exts_per_stripe" << num_exts_per_stripe <<"key" << key << std::endl;
     if (num_exts_at_key >= num_exts_per_stripe) {
       return striper->create_stripe(extent_stack, simulation_time);
     } else {
@@ -176,6 +178,7 @@ public:
   str_costs get_stripe(int key = 0) override {
     int num_exts_per_stripe = this->stripe_manager->num_data_exts_per_stripe;
     int num_exts = this->extent_stack->get_length_of_extent_stack();
+    
     if (num_exts >= num_exts_per_stripe) {
       return this->striper->create_stripe(this->extent_stack,
                                           this->simulation_time);

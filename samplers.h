@@ -33,7 +33,8 @@ protected:
 public:
   Sampler(float sim_time) {
     this->sim_time = sim_time;
-    this->seed = std::chrono::system_clock::now().time_since_epoch().count();
+    // this->seed = std::chrono::system_clock::now().time_since_epoch().count();
+    this->seed = 0;
     generator = std::mt19937(this->seed);
     this->name = "abstract";
   }
