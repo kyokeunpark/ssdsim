@@ -134,6 +134,10 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
     return randomized_objs_no_exts_config;
   else if (confname == "randomized_ext_placement_joined_pools_config")
     return randomized_ext_placement_joined_pools_config;
+  else if (confname == "randomized_obj_placement_joined_pools_config")
+    return randomized_obj_placement_joined_pools_config;
+  else if (confname == "randomized_objs_no_exts_mix_objs_config")
+    return randomized_objs_no_exts_mix_objs_config;
   else if (confname == "no_exts_mix_objs_config")
     return no_exts_mix_objs_config;
   return nullptr;
@@ -156,7 +160,13 @@ void run_simulator(const string confname, const ext_lst ext_sizes,
   int num_objs_per_cycle = total_objs / simul_time * striping_cycle;
   auto config = parse_config(confname);
   shared_ptr<SimpleSampler> samplerptr = make_shared<SimpleSampler>(sampler);
-  
+
+  if (!config) {
+    std::cerr << "Error: invalid config (" << confname
+        << ") detected! Exiting..." << std::endl;
+    exit(1);
+  }
+
   for (auto ext_size : ext_sizes) {
     std::cout << "Extent " << ext_size << std::endl;
     auto dc = config(data_center_size, striping_cycle, simul_time, ext_size,
@@ -169,9 +179,10 @@ void run_simulator(const string confname, const ext_lst ext_sizes,
       +std::to_string(primary_threshold)+"-"+std::to_string(secondary_threshold)+ "_" + std::string(sampler) + ".csv";
       print_to_file(confname, filename, ext_size, primary_threshold, secondary_threshold, res);
     }
-   
+
   }
 }
+
 int main(int argc, char *argv[]) {
   int ext_size;
   short threshold;
@@ -185,7 +196,10 @@ int main(int argc, char *argv[]) {
     std::cout << argv[1] << std::endl;
     std::cout << ext_size << ", " << threshold << std::endl;
   } else {
+    // Baseline
     config = "stripe_level_with_no_exts_config";
+
+    // config = "randomized_objs_no_exts_mix_objs_config";
     ext_size = 3 * 1024;
     threshold = 10;
   }
