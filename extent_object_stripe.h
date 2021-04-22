@@ -1,5 +1,5 @@
 #pragma once
-
+#include "config.h"
 #include "extent_object_shard.h"
 #include <ctime>
 #include <iostream>
@@ -91,7 +91,7 @@ public:
       : obsolete_space(0), free_space(e_s), ext_size(e_s), id(i),
         objects(
             new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>()),
-        locality(0), generation(0), timestamp(0), type("0"),
+        locality(0), generation(0), timestamp(configtime), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
   ~Extent() { delete objects; }

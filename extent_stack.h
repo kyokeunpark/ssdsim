@@ -26,13 +26,13 @@ struct isExtent {
 };
 
 using stack_val = std::vector<Extent *>;
-using ext_stack = std::map<int, stack_val>;
-using ext_stack_desc = std::map<int, stack_val, std::greater<int>>;
+using ext_stack = std::map<float, stack_val>;
+using ext_stack_desc = std::map<float, stack_val, std::greater<int>>;
 
 // Used for WholeObjectExtentStack, which stores extent lists together
 using stack_lst = std::vector<stack_val>;
-using ext_lst_stack = std::map<int, stack_lst>;
-using ext_lst_stack_desc = std::map<int, stack_lst, std::greater<int>>;
+using ext_lst_stack = std::map<float, stack_lst>;
+using ext_lst_stack_desc = std::map<float, stack_lst, std::greater<float>>;
 
 class AbstractExtentStack {
 protected:
@@ -45,13 +45,13 @@ public:
 
   virtual int num_stripes(int stripe_size) = 0;
   virtual list<Extent *> pop_stripe_num_exts(int stripe_size) = 0;
-  virtual void add_extent(int key, Extent *ext){};
+  virtual void add_extent(float key, Extent *ext){};
   virtual int get_length_of_extent_stack() = 0;
-  virtual int get_length_at_key(int key) = 0;
-  virtual Extent *get_extent_at_key(int key) = 0;
+  virtual int get_length_at_key(float key) = 0;
+  virtual Extent *get_extent_at_key(float key) = 0;
   virtual bool contains_extent(Extent *extent) = 0;
   virtual void remove_extent(Extent *extent) = 0;
-  virtual Extent *get_extent_at_closest_key(int key) { std::cerr<<"should never be called virtual get_ext_at_closet_key"; return nullptr; };
+  virtual Extent *get_extent_at_closest_key(float key) { std::cerr<<"should never be called virtual get_ext_at_closet_key"; return nullptr; };
   virtual void add_extent(stack_val &ext_lst) {
     std::cerr << "extent stack virtual add extent!";
   }
@@ -71,7 +71,7 @@ public:
 
   virtual list<Extent *> pop_stripe_num_exts(int stripe_size) override = 0;
 
-  void add_extent(int key, Extent *ext) override {
+  void add_extent(float key, Extent *ext) override {
     if (this->extent_stack.find(key) == this->extent_stack.end())
       this->extent_stack.emplace(key, stack_val());
     this->extent_stack[key].push_back(ext);
@@ -85,7 +85,7 @@ public:
     return length;
   }
 
-  virtual int get_length_at_key(int key) override {
+  virtual int get_length_at_key(float key) override {
     auto it = extent_stack.find(key);
     return it == extent_stack.end() ? 0 : it->second.size();
   }
@@ -99,7 +99,7 @@ public:
       del self.extent_stack[key]
   return ext
   */
-  virtual Extent *get_extent_at_key(int key) override {
+  virtual Extent *get_extent_at_key(float key) override {
     if (extent_stack.find(key) == extent_stack.end())
       return nullptr;
     stack_val * exts = &this->extent_stack[key];
@@ -221,7 +221,7 @@ class BestEffortExtentStack : public SingleExtentStack<ext_stack> {
 public:
   using SingleExtentStack<ext_stack> ::SingleExtentStack;
   // double check correctness
-  Extent *get_extent_at_closest_key(int key) override {
+  Extent *get_extent_at_closest_key(float key) override {
     if (extent_stack.size() == 1) {
       return get_extent_at_key(extent_stack.begin()->first);
     }
@@ -253,8 +253,8 @@ public:
   int num_stripes(int stripe_size) override {
     return extent_stack->num_stripes(stripe_size);
   }
-  void add_extent(int e, Extent *s) override { extent_stack->add_extent(e, s); }
-  int get_length_at_key(int k) override {
+  void add_extent(float e, Extent *s) override { extent_stack->add_extent(e, s); }
+  int get_length_at_key(float k) override {
     return extent_stack->get_length_at_key(k);
   }
   int get_length_of_extent_stack() override {
@@ -275,7 +275,7 @@ public:
     }
     return extent_stack->pop_stripe_num_exts(stripe_size);
   }
-  Extent *get_extent_at_closest_key(int key) override {
+  Extent *get_extent_at_closest_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
       std::shuffle(it->second.begin(), it->second.end(), rng);
@@ -283,7 +283,7 @@ public:
     }
     return extent_stack->get_extent_at_closest_key(key);
   }
-  Extent *get_extent_at_key(int key) override {
+  Extent *get_extent_at_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
       std::shuffle(it->second.begin(), it->second.end(), rng);
@@ -318,7 +318,7 @@ public:
   }
 
   void add_extent(stack_val &ext_lst) override {
-    int key = ext_lst.size();
+    float key = ext_lst.size();
     //std::cout << "key" << key <<std::endl;
     if (this->extent_stack.find(key) == this->extent_stack.end())
       extent_stack.emplace(key, stack_lst());
@@ -392,7 +392,7 @@ public:
       """
       return self.get_length_of_extent_stack()
   */
-  int get_length_at_key(int key) override {
+  int get_length_at_key(float key) override {
     return get_length_of_extent_stack();
   }
 
@@ -406,7 +406,7 @@ public:
            del self.extent_stack[key]
        return ext
   */
-  Extent *get_extent_at_key(int k) override {
+  Extent *get_extent_at_key(float k) override {
     if(extent_stack.size() > 0)
     {
       auto smallest = std::prev(extent_stack.end());

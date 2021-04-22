@@ -310,8 +310,8 @@ inline DataCenter age_based_config_no_exts(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = obj_pq();
-  static auto temp_op_gc = obj_pq();
+  static auto temp_op = make_shared<obj_pq>();
+  static auto temp_op_gc = make_shared<obj_pq>();
   static auto temp_curr_exts = make_shared<current_extents>();
   static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<AgeBasedObjectPacker>(
@@ -371,8 +371,8 @@ inline DataCenter age_based_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = obj_pq();
-  static auto temp_op_gc = obj_pq();
+  static auto temp_op = make_shared<obj_pq>();
+  static auto temp_op_gc = make_shared<obj_pq>();
   static auto temp_curr_exts = make_shared<current_extents>();
   static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<AgeBasedObjectPacker>(
@@ -1076,8 +1076,8 @@ inline DataCenter age_based_rand_config_no_exts(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = obj_pq();
-  static auto temp_op_gc = obj_pq();
+  static auto temp_op = make_shared<obj_pq>();
+  static auto temp_op_gc = make_shared<obj_pq>();
   static auto temp_curr_exts = make_shared<current_extents>();
   static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
@@ -1109,7 +1109,7 @@ inline DataCenter age_based_rand_config_no_exts(
   return data_center;
 }
 
-inline int default_key() { return 0; }
+inline float default_key() { return 0; }
 
 inline DataCenter generational_config(
     const unsigned long data_center_size, const float striping_cycle,
@@ -1139,8 +1139,8 @@ inline DataCenter generational_config(
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  static auto temp_op = obj_pq();
-  static auto temp_op_gc = obj_pq();
+  static auto temp_op = make_shared<obj_pq>();
+  static auto temp_op_gc = make_shared<obj_pq>();
   auto temp_curr_exts = make_shared<current_extents>();
   auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer =
@@ -1158,7 +1158,7 @@ inline DataCenter generational_config(
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
-          gc_extent_stack, stripe_mngr, simul_time, get_timestamp);
+          gc_extent_stack, stripe_mngr, simul_time, default_key);
   /*TODO
 gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
 secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)

@@ -34,14 +34,15 @@ public:
     gc_object_packer->gc_extent(ext, gc_extent_stack, objs);
   }
 
-  virtual Extent *get_gc_extent(int key = 0) {
+  virtual Extent *get_gc_extent(float key = 0) {
     if (gc_extent_stack->get_length_at_key(key) > 0) {
       return gc_extent_stack->get_extent_at_key(key);
     }
+    // std::cout << "nullptr" << std::endl;
     return nullptr;
   }
 
-  virtual str_costs get_stripe(int key = 0) {
+  virtual str_costs get_stripe(float key = 0) {
     int num_exts_per_stripe = stripe_manager->num_data_exts_per_stripe;
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     // std::cout << "get_length_of_extent_stack get_stripe" << num_exts_at_key << "num_exts_per_stripe" << num_exts_per_stripe <<"key" << key << std::endl;
@@ -105,7 +106,7 @@ public:
     return array<double, 2>{num_times_default * 100.0 / total,
                             num_times_alternative * 100.0 / total};
   }
-  virtual Extent *get_extent(int key) {
+  virtual Extent *get_extent(float key) {
     if (this->extent_stack->get_length_at_key(key) > 0) {
       return this->extent_stack->get_extent_at_key(key);
     } else {
@@ -149,7 +150,7 @@ public:
       : StripingProcessCoordinator(o_p, gc_o_p, s, gc_s, e_s, gc_e_s, s_m, s_t),
         default_key(key) {}
 
-  Extent *get_extent(int key) override {
+  Extent *get_extent(float key) override {
     if (this->extent_stack->get_length_at_key(key) > 0) {
       return this->extent_stack->get_extent_at_key(key);
     } else {
@@ -162,7 +163,7 @@ public:
       }
     }
   }
-  Extent *get_gc_extent(int key) override {
+  Extent *get_gc_extent(float key) override {
     if (this->gc_extent_stack->get_length_at_key(key) > 0) {
       return this->gc_extent_stack->get_extent_at_key(key);
     } else {
@@ -175,7 +176,7 @@ public:
       }
     }
   }
-  str_costs get_stripe(int key = 0) override {
+  str_costs get_stripe(float key = 0) override {
     int num_exts_per_stripe = this->stripe_manager->num_data_exts_per_stripe;
     int num_exts = this->extent_stack->get_length_of_extent_stack();
     

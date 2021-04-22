@@ -242,12 +242,12 @@ public:
     gc_ext_res(float r, float w) : user_reads(r), user_writes(w) {}
   };
   gc_ext_res gc_ext(Extent *ext, Stripe *stripe) {
-    std::any key = extent_manager->get_key(ext);
+    float key = extent_manager->get_key(ext);
     Extent *temp_ext =
-        striping_process_coordinator->get_gc_extent(std::any_cast<float>(key));
+        striping_process_coordinator->get_gc_extent(key);
     if (temp_ext == nullptr) {
       temp_ext =
-          striping_process_coordinator->get_extent(std::any_cast<float>(key));
+          striping_process_coordinator->get_extent(key);
     }
 
     stripe->add_extent(temp_ext);

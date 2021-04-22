@@ -22,6 +22,7 @@
 #include <vector>
 
 typedef std::tuple<float, ExtentObject *, int> obj_pq_record;
+using obj_pq = std::priority_queue<std::variant<obj_record, obj_pq_record>>;
 using current_extents = std::unordered_map<int, Extent *>;
 using ext_types_mgr = std::unordered_map<string, int>;
 
@@ -59,7 +60,7 @@ public:
    * policy of how to pack objects into extents.
    */
   virtual void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
-                            std::set<ExtentObject *>& objs, int key = 0){};
+                            std::set<ExtentObject *>& objs, float key = 0){};
 };
 
 class GenericObjectPacker : public ObjectPacker {
@@ -102,7 +103,7 @@ public:
   /*
    * Add the objects in obj_lst to the object pool.
    */
-  void add_objs(object_lst obj_lst) {
+  virtual void add_objs(object_lst obj_lst) {
     obj_pool->reserve( obj_pool->size() + obj_lst.size() ); 
     obj_pool->insert(obj_pool->end(), obj_lst.begin(), obj_lst.end());
   }
@@ -171,7 +172,7 @@ public:
    */
   virtual void
   generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                       int num_exts, int key) {
+                       int num_exts, float key) {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
@@ -189,7 +190,7 @@ public:
    * belonging to one key mix with extents from another)
    */
   virtual void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                                int simulation_time) {
+                                float simulation_time) {
     if (obj_pool->size() < this->num_objs_in_pool) {
       object_lst objs = this->obj_manager->create_new_object(
           this->num_objs_in_pool - obj_pool->size());
@@ -212,7 +213,7 @@ public:
 
   virtual void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, float obj_rem_size, int key) {
+                                ExtentObject *obj, float obj_rem_size, float key) {
     float temp = 0;
     if (this->current_exts->find(key) == this->current_exts->end())
       this->current_exts->emplace(key, this->ext_manager->create_extent());
@@ -259,7 +260,7 @@ public:
   using GenericObjectPacker::GenericObjectPacker;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     while (obj_pool->size() > 0) {
       obj_record obj = obj_pool->back();
       obj_pool->pop_back();
@@ -284,7 +285,7 @@ public:
    * Can't generate a gc stripe on-demand.
    */
   virtual void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                                int simulation_time) override {
+                                float simulation_time) override {
     return;
   }
 
@@ -304,7 +305,7 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     while (obj_pool->size() > 0) {
       obj_record obj = obj_pool->back();
       obj_pool->pop_back();
@@ -325,7 +326,7 @@ public:
   using SimpleObjectPacker::SimpleObjectPacker;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override{
+                    float key = 0) override{
     std::vector<ExtentObject *> objs_lst = {};
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
@@ -352,7 +353,7 @@ public:
   using SimpleGCObjectPacker::SimpleGCObjectPacker;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     std::vector<ExtentObject *> objs_lst = {};
     for (auto &it : *obj_pool) {
       float rem_size = it.second;
@@ -383,7 +384,7 @@ public:
    * extent size they don't, for generations and lifetime they do).
    */
   void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                        int simulation_time = 365) override {
+                        float simulation_time = 365) override {
     int ave_pool_size = 46000;
     int curr_pool_size = 0;
     bool new_objs_added = false;
@@ -416,7 +417,7 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     for (auto record : *obj_pool)
       this->add_obj_to_current_ext_at_key(extent_stack, record.first,
                                           record.second, key);
@@ -427,7 +428,7 @@ public:
    * The method generates num_exts at the given key
    */
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     // Check if the pool has enough object volume, and if not, generate
     // more fresh objects
     int ave_pool_size = 46000;
@@ -507,7 +508,7 @@ public:
    * extent size they don't, for generations and lifetime they do).
    */
   void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                        int simulation_time = 365) override {
+                        float simulation_time = 365) override {
     if (obj_pool->size() < this->num_objs_in_pool) {
       auto objs = this->obj_manager->create_new_object(this->num_objs_in_pool -
                                                        obj_pool->size());
@@ -519,7 +520,7 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     shuffle(obj_pool->begin(), obj_pool->end(), rng);
     while(!obj_pool->empty()){
       auto obj = obj_pool->front();
@@ -530,7 +531,7 @@ public:
   }
  
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     std::shuffle(obj_pool->begin(), obj_pool->end(),
                  rng);
@@ -598,7 +599,7 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     std::mt19937_64 rd;
     auto time_seed =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -607,7 +608,7 @@ public:
     float p;
 
     while (obj_pool->size() > 0) {
-      int key = immortal_key;
+      float key = immortal_key;
       auto obj = obj_pool->front();
       obj_pool->erase(obj_pool->begin());
       p = unif(rng);
@@ -641,13 +642,13 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
    
     std::uniform_real_distribution<float> unif(0, 1);
     float p;
 
     while (obj_pool->size() > 0) {
-      int key = immortal_key;
+      float key = immortal_key;
       auto obj = obj_pool->front();
       obj_pool->erase(obj_pool->begin());
       p = unif(rng);
@@ -730,7 +731,7 @@ public:
 
   std::pair<int, Extent *>
   add_obj_to_current_ext(shared_ptr<AbstractExtentStack> extent_stack,
-                         ExtentObject *obj, float obj_rem_size, int key) {
+                         ExtentObject *obj, float obj_rem_size, float key) {
     auto current_ext = (*this->current_exts)[key];
     auto tmp = current_ext->add_object(obj, obj_rem_size);
 
@@ -748,7 +749,7 @@ public:
 
   stack_val
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, float obj_rem_size, int key,
+                                ExtentObject *obj, float obj_rem_size, float key,
                                 ext_stack obj_ids_to_exts) {
     stack_val exts = stack_val();
     if (this->current_exts->find(key) == this->current_exts->end())
@@ -792,7 +793,7 @@ public:
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     auto abs_ext_stack =
         std::static_pointer_cast<WholeObjectExtentStack>(extent_stack);
     stack_val exts = stack_val();
@@ -860,7 +861,7 @@ public:
       SizeBasedObjectPackerSmallerWholeObj;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     auto abs_ext_stack =
         std::static_pointer_cast<WholeObjectExtentStack>(extent_stack);
     stack_val exts = stack_val();
@@ -911,7 +912,7 @@ class SizeBasedObjectPackerBaseline : public SimpleObjectPacker {
 public:
   using SimpleObjectPacker::SimpleObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     std::sort(obj_pool->begin(), obj_pool->end());
   };
 };
@@ -919,7 +920,7 @@ class SizeBasedGCObjectPackerBaseline : public SimpleGCObjectPacker {
 public:
   using SimpleGCObjectPacker::SimpleGCObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     std::sort(obj_pool->begin(), obj_pool->end());
     while (!obj_pool->empty()) {
       obj_record record = obj_pool->back();
@@ -937,7 +938,7 @@ public:
       SizeBasedObjectPackerSmallerWholeObj;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     if (current_exts->find(key) != current_exts->end()) {
       object_lst objs = (*current_exts)[key]->delete_ext();
       add_objs(objs);
@@ -981,7 +982,7 @@ public:
   using SizeBasedGCObjectPackerSmallerWholeObj::
       SizeBasedGCObjectPackerSmallerWholeObj;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     pack_objects(extent_stack, objs, 0);
   };
 };
@@ -992,7 +993,7 @@ public:
       SizeBasedObjectPackerSmallerWholeObj;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     if (SizeBasedObjectPackerSmallerWholeObj::current_exts->find(key) !=
         SizeBasedObjectPackerSmallerWholeObj::current_exts->end()) {
       object_lst objs =
@@ -1062,7 +1063,7 @@ public:
   using SizeBasedObjectPackerSmallerWholeObj::
       SizeBasedObjectPackerSmallerWholeObj;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     if (current_exts->find(key) != current_exts->end()) {
       object_lst objs = (*current_exts)[key]->delete_ext();
       add_objs(objs);
@@ -1114,7 +1115,7 @@ public:
   using SizeBasedObjectPackerSmallerWholeObjFillGap::
       SizeBasedObjectPackerSmallerWholeObjFillGap;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     if (current_exts->find(key) != current_exts->end()) {
       object_lst objs = (*current_exts)[key]->delete_ext();
       add_objs(objs);
@@ -1167,7 +1168,7 @@ class SizeBasedObjectPackerLargerWholeObj : public SizeBasedObjectPacker {
 public:
   using SizeBasedObjectPacker::SizeBasedObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     if (current_exts->find(key) != current_exts->end()) {
       auto objs = (*current_exts)[key]->delete_ext();
       add_objs(objs);
@@ -1199,7 +1200,7 @@ public:
   }
   std::pair<int, Extent *>
   add_obj_to_current_ext(shared_ptr<AbstractExtentStack> extent_stack,
-                         ExtentObject *obj, float obj_rem_size, int key) {
+                         ExtentObject *obj, float obj_rem_size, float key) {
     auto current_ext = (*this->current_exts)[key];
     auto tmp = current_ext->add_object(obj, obj_rem_size);
 
@@ -1216,7 +1217,7 @@ public:
   }
   stack_val
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                                ExtentObject *obj, float obj_rem_size, int key,
+                                ExtentObject *obj, float obj_rem_size, float key,
                                 ext_stack obj_ids_to_exts) {
     stack_val exts = stack_val();
     if (this->current_exts->find(key) == this->current_exts->end())
@@ -1268,18 +1269,18 @@ public:
       SizeBasedObjectPackerLargerWholeObj;
 };
 
+
 class KeyBasedObjectPacker : public SimpleObjectPacker {
 protected:
   float (ExtentObject::*obj_key_fnc)();
   float (Extent::*ext_key_fnc)();
-  std::priority_queue<std::variant<obj_record, obj_pq_record>> obj_queue;
+  shared_ptr<obj_pq> obj_queue;
 
 public:
   KeyBasedObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> obj_q =
-          std::priority_queue<std::variant<obj_record, obj_pq_record>>(),
+      shared_ptr<obj_pq> obj_q,
       shared_ptr<current_extents> current_exts = nullptr,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false, float (ExtentObject::*o_k_f)() = nullptr,
@@ -1287,49 +1288,59 @@ public:
       : SimpleObjectPacker(obj_manager, ext_manager, nullptr, current_exts,
                            num_objs_in_pool, threshold, record_ext_types),
         obj_key_fnc(o_k_f), ext_key_fnc(e_k_f), obj_queue(obj_q){};
-
+  
+  void add_objs(object_lst obj_lst) override {
+    for(auto o : obj_lst)
+    {
+      add_obj(o);
+    }
+  }
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
+    std::cout << extent_stack->get_length_of_extent_stack() << std::endl;
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
       for (auto r : objs) {
-        obj_queue.push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
-                                     r.first->size));
+        obj_queue->push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
+                                     r.first->size));        
       }
+      auto temp = std::set<ExtentObject *>();
+      pack_objects(extent_stack, temp, key);
       num_exts_at_key = extent_stack->get_length_at_key(key);
+      // std::cout << "num_exts_at_key in looop" << num_exts_at_key << "key" << key <<std::endl;
     }
   }
 
   void add_obj(obj_record r) override {
-    obj_queue.push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
+    obj_queue->push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
                                  r.first->size));
   }
 
   void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                        int simulation_time) override {
-    if (obj_queue.size() < num_objs_in_pool) {
+                        float simulation_time) override {
+    if (obj_queue->size() < num_objs_in_pool) {
       object_lst objs =
-          obj_manager->create_new_object(num_objs_in_pool - obj_queue.size());
+          obj_manager->create_new_object(num_objs_in_pool - obj_queue->size());
       for (obj_record r : objs) {
         add_obj(r);
-        auto temp = std::set<ExtentObject*>();
-        pack_objects(extent_stack, temp);
       }
+      auto temp = std::set<ExtentObject*>();
+      pack_objects(extent_stack, temp);
     }
   }
 
   void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
                                 ExtentObject *obj, float obj_rem_size,
-                                int key) override {
+                                float key) override {
     float temp = 0;
     if (current_exts->find(key) == current_exts->end()) {
       (*current_exts)[key] = ext_manager->create_extent();
     }
     Extent *current_extent = (*current_exts)[key];
     float rem_size = obj_rem_size;
-    while (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
+    while (rem_size > 0) {
       temp = current_extent->add_object(obj, obj_rem_size);
       rem_size = rem_size - temp;
       if (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
@@ -1343,12 +1354,12 @@ public:
     }
   }
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
-    while (!obj_queue.empty()) {
-      obj_pq_record r = std::get<obj_pq_record>(obj_queue.top());
-      obj_queue.pop();
+                    float key = 0) override {
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      obj_queue->pop();
       add_obj_to_current_ext_at_key(extent_stack, std::get<1>(r),
-                                    std::get<2>(r), key);
+                                    std::get<2>(r), 0);
     }
   };
 };
@@ -1357,13 +1368,13 @@ class KeyBasedGCObjectPacker : public SimpleGCObjectPacker {
 protected:
   float (ExtentObject::*obj_key_fnc)();
   float (Extent::*ext_key_fnc)();
-  std::priority_queue<std::variant<obj_record, obj_pq_record>> obj_queue;
+  shared_ptr<obj_pq> obj_queue;
 
 public:
   KeyBasedGCObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> obj_q,
+      shared_ptr<obj_pq> obj_q,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false, float (ExtentObject::*o_k_f)() = nullptr,
@@ -1371,25 +1382,37 @@ public:
       : SimpleGCObjectPacker(obj_manager, ext_manager, nullptr, current_exts,
                              num_objs_in_pool, threshold, record_ext_types),
         obj_key_fnc(o_k_f), ext_key_fnc(e_k_f), obj_queue(obj_q){};
+  void add_objs(object_lst obj_lst) override {
+    for(auto o : obj_lst)
+    {
+      add_obj(o);
+    }
+  }
+  void add_obj(obj_record r) override {
+    obj_queue->push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
+                                 r.first->size));
+  }
 
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
       for (auto r : objs) {
-        obj_queue.push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
+        obj_queue->push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
                                      r.first->size));
       }
+      auto temp = std::set<ExtentObject *>();
+      pack_objects(extent_stack, temp, key);
       num_exts_at_key = extent_stack->get_length_at_key(key);
     }
   }
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
-                    std::set<ExtentObject *>& objs, int key = 0) override {
-    while (!obj_queue.empty()) {
-      obj_pq_record r = std::get<obj_pq_record>(obj_queue.top());
-      int key = 0;
-      obj_queue.pop();
+                    std::set<ExtentObject *>& objs, float key = 0) override {
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      float key = 0;
+      obj_queue->pop();
       add_obj_to_current_ext_at_key(extent_stack, std::get<1>(r),
                                     std::get<2>(r), key);
     }
@@ -1407,35 +1430,22 @@ public:
     this->pack_objects(extent_stack, objs);
   }
 
-  void add_obj(obj_record r) override {
-    obj_queue.push(obj_pq_record(std::invoke(obj_key_fnc, r.first), r.first,
-                                 r.first->size));
-  }
-
   void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                        int simulation_time) override {
-    if (obj_queue.size() < num_objs_in_pool) {
-      auto objs =
-          obj_manager->create_new_object(num_objs_in_pool - obj_queue.size());
-      for (auto p : objs) {
-        add_obj(obj_record(p.first, p.second));
-      }
-      std::set<ExtentObject *> aaa;
-      pack_objects(extent_stack, aaa);
-    }
+                        float simulation_time) override {
+    return;
   }
 
   void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
                                 ExtentObject *obj, float obj_rem_size,
-                                int key) override {
+                                float key) override {
     float temp = 0;
     if (current_exts->find(key) == current_exts->end()) {
       (*current_exts)[key] = ext_manager->create_extent();
     }
     Extent *current_extent = (*current_exts)[key];
     float rem_size = obj_rem_size;
-    while (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
+    while (rem_size > 0) {
       temp = current_extent->add_object(obj, obj_rem_size);
       rem_size = rem_size - temp;
       if (rem_size > 0 || (rem_size == 0 && current_extent->free_space == 0)) {
@@ -1455,7 +1465,7 @@ public:
   AgeBasedObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> q,
+      shared_ptr<obj_pq> q,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false)
@@ -1464,12 +1474,12 @@ public:
                              &ExtentObject::get_timestamp,
                              &Extent::get_timestamp) {}
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
-                    std::set<ExtentObject *>& objs, int key = 0) override {
-    while (!obj_queue.empty()) {
-      obj_pq_record r = std::get<obj_pq_record>(obj_queue.top());
-      obj_queue.pop();
+                    std::set<ExtentObject *>& objs, float key = 0) override {
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      obj_queue->pop();
       add_obj_to_current_ext_at_key(extent_stack, std::get<1>(r),
-                                    std::get<2>(r), key);
+                                    std::get<2>(r), 0);
     }
   };
 };
@@ -1479,7 +1489,7 @@ public:
   AgeBasedGCObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> q,
+      shared_ptr<obj_pq> q,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false)
@@ -1488,12 +1498,12 @@ public:
                                &ExtentObject::get_timestamp,
                                &Extent::get_timestamp) {}
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
-    while (!obj_queue.empty()) {
-      obj_pq_record r = std::get<obj_pq_record>(obj_queue.top());
-      obj_queue.pop();
+                    float key = 0) override {
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      obj_queue->pop();
       add_obj_to_current_ext_at_key(extent_stack, std::get<1>(r),
-                                    std::get<2>(r), key);
+                                    std::get<2>(r), 0);
     }
   };
 };
@@ -1502,7 +1512,7 @@ class AgeBasedRandomizedObjectPacker : public AgeBasedObjectPacker {
 public:
   using AgeBasedObjectPacker::AgeBasedObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     std::priority_queue<obj_pq_record> objs_lst =
         std::priority_queue<obj_pq_record>();
   }
@@ -1512,11 +1522,11 @@ class AgeBasedRandomizedGCObjectPacker : public AgeBasedGCObjectPacker {
 public:
   using AgeBasedGCObjectPacker::AgeBasedGCObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    int key = 0) override {
+                    float key = 0) override {
     list<obj_pq_record> objs_lst;
-    while (!obj_queue.empty()) {
-      obj_pq_record r = std::get<obj_pq_record>(obj_queue.top());
-      obj_queue.pop();
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      obj_queue->pop();
       objs_lst.push_back(r);
     }
     while (objs_lst.size() > 0) {
@@ -1548,7 +1558,7 @@ public:
   GenerationBasedObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> q,
+      shared_ptr<obj_pq> q,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false)
@@ -1558,13 +1568,14 @@ public:
                              &Extent::get_generation) {}
 
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
+    // std::cout << extent_stack->get_length_of_extent_stack() << std::endl;
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
       for (auto r : objs) {
         ExtentObject *obj = r.first;
-        obj_queue.push(obj_record(obj, obj->size));
+        obj_queue->push(obj_record(obj, obj->size));
       }
       auto temp = std::set<ExtentObject*>();
       pack_objects(extent_stack, temp);
@@ -1572,10 +1583,10 @@ public:
     }
   }
   void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
-                        int simulation_time) override {
-    if (obj_queue.size() < num_objs_in_pool) {
+                        float simulation_time) override {
+    if (obj_queue->size() < num_objs_in_pool) {
       auto objs =
-          obj_manager->create_new_object(num_objs_in_pool - obj_pool->size());
+          obj_manager->create_new_object(num_objs_in_pool - obj_queue->size());
       for (auto p : objs) {
         add_obj(obj_record(p.first, p.second));
       }
@@ -1583,14 +1594,17 @@ public:
       pack_objects(extent_stack, temp);
     }
   }
-  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs, int k = 0) override {
-    while (obj_pool->size() > 0) {
-      obj_record r = std::get<obj_record>(obj_queue.top());
-      int key = r.first->generation;
+  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs, float k = 0) override {
+    // std::cout << "pack_objects before" << obj_queue->size() << std::endl;
+    while (obj_queue->size() > 0) {
+      obj_record r = std::get<obj_record>(obj_queue->top());
+      obj_queue->pop();
+      float key = r.first->generation;
       add_obj_to_current_ext_at_key(extent_stack, r.first, r.second, key);
     }
+    // std::cout << "pack_objects after" << obj_queue->size() << std::endl;
   }
-  void add_obj(obj_record record) override { obj_queue.push(record); }
+  void add_obj(obj_record record) override { obj_queue->push(record); }
 };
 
 class GenerationBasedGCObjectPacker : public KeyBasedGCObjectPacker {
@@ -1598,7 +1612,7 @@ public:
   GenerationBasedGCObjectPacker(
       shared_ptr<ObjectManager> obj_manager,
       shared_ptr<ExtentManager> ext_manager,
-      std::priority_queue<std::variant<obj_record, obj_pq_record>> q,
+      shared_ptr<obj_pq> q,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
       bool record_ext_types = false)
@@ -1606,16 +1620,16 @@ public:
                                num_objs_in_pool, threshold, record_ext_types,
                                &ExtentObject::get_generation,
                                &Extent::get_generation) {}
-  void add_obj(obj_record record) override { obj_queue.push(record); }
+  void add_obj(obj_record record) override { obj_queue->push(record); }
 
   void generate_exts_at_key(shared_ptr<AbstractExtentStack> extent_stack,
-                            int num_exts, int key) override {
+                            int num_exts, float key) override {
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
       for (auto r : objs) {
         ExtentObject *obj = r.first;
-        obj_queue.push(obj_record(obj, obj->size));
+        obj_queue->push(obj_record(obj, obj->size));
       }
       std::set<ExtentObject *> aaa;
       pack_objects(extent_stack, aaa);
@@ -1623,15 +1637,15 @@ public:
     }
   }
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
-                    std::set<ExtentObject *> &objs, int k = 0) override {
-    while (obj_pool->size() > 0) {
-      obj_record r = std::get<obj_record>(obj_queue.top());
-      obj_queue.pop();
+                    std::set<ExtentObject *> &objs, float k = 0) override {
+    while (obj_queue->size() > 0) {
+      obj_record r = std::get<obj_record>(obj_queue->top());
+      obj_queue->pop();
       if (objs.size() != 0 && objs.find(r.first) != objs.end()) {
         objs.insert(r.first);
         r.first->generation++;
       }
-      int key = r.first->generation;
+      float key = r.first->generation;
 
       add_obj_to_current_ext_at_key(extent_stack, r.first, r.second, key);
     }
