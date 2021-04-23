@@ -147,14 +147,14 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
 /*
  * TODO: Run the simulator and write out the results to the csv file.
  */
-void run_simulator(const string confname, const ext_lst ext_sizes,
+void run_simulator(const string confname, const int percent_correct, const ext_lst ext_sizes,
                    const short primary_threshold,
                    const short secondary_threshold,
                    const short num_stripes_per_cycle,
                    const float striping_cycle, const float deletion_cycle,
                    const unsigned long data_center_size, const float simul_time,
                    SimpleSampler &sampler, const int total_objs,
-                   bool save_to_file = true, bool record_ext_types = true, const int percent_correct = 100) {
+                   bool save_to_file = true, bool record_ext_types = true) {
   string file_basename = confname;
   int num_objs_per_cycle = total_objs / simul_time * striping_cycle;
   auto config = parse_config(confname);
@@ -178,8 +178,15 @@ void run_simulator(const string confname, const ext_lst ext_sizes,
     auto res = dc.run_simulation();
     if(save_to_file)
     {
-      string filename = string(confname) + "_" + std::to_string(ext_size) + "-" + std::to_string(total_objs) + "_objs-"
-      +std::to_string(primary_threshold)+"-"+std::to_string(secondary_threshold)+ "_" + std::string(sampler) + ".csv";
+      string filename;
+      if(confname == "mortal_immortal_no_exts_config")
+      {
+        filename = string(confname) + "_" + std::to_string(percent_correct) + "_" + std::to_string(ext_size) + "-" + std::to_string(total_objs) + "_objs-"
+        +std::to_string(primary_threshold)+"-"+std::to_string(secondary_threshold)+ "_" + std::string(sampler) + ".csv";
+      }else{
+        filename = string(confname) + "_" + std::to_string(ext_size) + "-" + std::to_string(total_objs) + "_objs-"
+        +std::to_string(primary_threshold)+"-"+std::to_string(secondary_threshold)+ "_" + std::string(sampler) + ".csv";
+      }
       print_to_file(confname, filename, ext_size, primary_threshold, secondary_threshold, res);
     }
 
@@ -191,14 +198,14 @@ int main(int argc, char *argv[]) {
   short threshold;
   string config;
 
-  if (argc >= 4) {
+  if (argc == 4 || argc == 5) {
     config = argv[1];
     ext_size = atol(argv[2]);
     threshold = atol(argv[3]);
 
     std::cout << argv[1] << std::endl;
     std::cout << ext_size << ", " << threshold << std::endl;
-  } else {
+  }else {
     // Baseline
     config = "stripe_level_with_no_exts_config";
 
@@ -211,9 +218,9 @@ int main(int argc, char *argv[]) {
   const unsigned long data_center_size = 3500000 * (unsigned long)ave_obj_size;
   const float striping_cycle = 1.0 / 12.0;
   const float deletion_cycle = striping_cycle;
-  const float simul_time = 365;
+  const float simul_time = 1;
   const int num_objs = 1000000;
-
+  const int percent_correct = argc == 5? atoi(argv[4]) : 100;
   // Flag to record information about ext size distributions - small object
   // extents, large obj exts, etc
   const bool record_ext_types = false;
@@ -228,16 +235,9 @@ int main(int argc, char *argv[]) {
   ext_lst ext_sizes = {ext_size};
 
   std::cout << threshold << ", " << secondary_threshold << std::endl;
-  if(argc == 5)
-  {
-    run_simulator(config, ext_sizes, threshold, secondary_threshold,
-                num_stripes_per_cycle, striping_cycle, deletion_cycle,
-                data_center_size, simul_time, sampler, total_objs, atoi(argv[4]));
-  }else{
-    run_simulator(config, ext_sizes, threshold, secondary_threshold,
+  run_simulator(config, percent_correct, ext_sizes, threshold, secondary_threshold,
                 num_stripes_per_cycle, striping_cycle, deletion_cycle,
                 data_center_size, simul_time, sampler, total_objs);
-  }
   
   return 0;
 }
