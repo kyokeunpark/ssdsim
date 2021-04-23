@@ -205,7 +205,7 @@ public:
       double added_obsolete_this_gc = 0;
       unordered_map<string, double> added_obsolete_by_type =
           unordered_map<string, double>();
-
+      // std::cout << "next_del_time" << next_del_time << "configtime " << configtime << "ret.dc_size" << ret.dc_size << std::endl;
       for (auto it : this->obs_by_ext_types)
         added_obsolete_by_type[it.first] = 0;
 

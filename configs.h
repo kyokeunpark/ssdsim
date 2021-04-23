@@ -16,7 +16,6 @@
 #include <queue>
 #include <variant>
 
-using std::cout, std::endl;
 using std::make_shared;
 using std::static_pointer_cast;
 using object_lst = std::vector<obj_record>;
@@ -699,11 +698,9 @@ inline DataCenter size_based_stripe_level_no_exts_larger_whole_obj_config(
           obj_mngr, ext_mngr, temp_op_gc, temp_curr_exts_gc, num_objs,
           primary_threshold);
   shared_ptr<AbstractExtentStack> extent_stack =
-      static_pointer_cast<AbstractExtentStack>(
-          make_shared<WholeObjectExtentStack>(stripe_mngr));
+          make_shared<WholeObjectExtentStack>(stripe_mngr);
   shared_ptr<AbstractExtentStack> gc_extent_stack =
-      static_pointer_cast<AbstractExtentStack>(
-          make_shared<WholeObjectExtentStack>(stripe_mngr));
+          make_shared<WholeObjectExtentStack>(stripe_mngr);
   shared_ptr<StripingProcessCoordinator> coordinator =
       make_shared<StripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,

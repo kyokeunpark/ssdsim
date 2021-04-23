@@ -80,9 +80,13 @@ public:
   float timestamp;
   string type;
   int secondary_threshold;
-
   float get_default_key() { return 0.0; }
-
+  bool operator <(const Extent& d) {
+        return this->id < d.id;
+  }
+  bool operator >(const Extent& d) {
+        return this->id > d.id;
+  }
   float get_timestamp() { return timestamp; }
 
   float get_generation() { return generation; }

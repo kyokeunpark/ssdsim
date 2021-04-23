@@ -33,8 +33,8 @@ protected:
 public:
   Sampler(float sim_time) {
     this->sim_time = sim_time;
-    // this->seed = std::chrono::system_clock::now().time_since_epoch().count();
-    this->seed = 0;
+    this->seed = std::chrono::system_clock::now().time_since_epoch().count();
+    // this->seed = 0;
     generator = std::mt19937(this->seed);
     this->name = "abstract";
   }
@@ -69,7 +69,6 @@ private:
     
     for (int i = 0; i < num_samples; i++) {
       double temp = real_dist(generator);
-      
       if (temp < 50)
         sizes_lst.emplace_back(randint(4, 10));
       else if (temp < 65)

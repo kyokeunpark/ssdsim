@@ -407,22 +407,18 @@ public:
        return ext
   */
   Extent *get_extent_at_key(float k) override {
-    if(extent_stack.size() > 0)
-    {
       auto smallest = std::prev(extent_stack.end());
       auto ext = smallest->second.front().front();
       smallest->second.erase(smallest->second.begin());
       if (smallest->second.size() == 0)
         extent_stack.erase(smallest);
       return ext;
-    }
-    return nullptr;
   }
 
   bool contains_extent(Extent *extent) override {
     for (auto &kv : extent_stack) {
       for (auto &l : kv.second) {
-        if (find_if(l.begin(), l.end(), isExtent(extent)) != l.end())
+        if (find(l.begin(), l.end(), extent) != l.end())
           return true;
       }
     }
@@ -449,7 +445,7 @@ public:
           lst_it++;
         }
       }
-      if(it->second.size() != 0)
+      if(it->second.size() == 0)
       {
         it = extent_stack.erase(it);
       }else{
