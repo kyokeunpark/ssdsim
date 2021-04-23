@@ -5,13 +5,11 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <random>
 
 using std::max;
 using std::min;
 using std::shared_ptr;
 typedef vector<Extent *> *extent_stack_ext_lst;
-static auto rng = std::default_random_engine(0);
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
@@ -270,7 +268,7 @@ public:
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
 
-      std::shuffle(it->second.begin(), it->second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), generator);
       it++;
     }
     return extent_stack->pop_stripe_num_exts(stripe_size);
@@ -278,7 +276,7 @@ public:
   Extent *get_extent_at_closest_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
-      std::shuffle(it->second.begin(), it->second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), generator);
       it++;
     }
     return extent_stack->get_extent_at_closest_key(key);
@@ -286,7 +284,7 @@ public:
   Extent *get_extent_at_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
-      std::shuffle(it->second.begin(), it->second.end(), rng);
+      std::shuffle(it->second.begin(), it->second.end(), generator);
       it++;
     }
     return extent_stack->get_extent_at_key(key);

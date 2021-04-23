@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "configs.h"
+#include "data_center.h"
 #include "object_packer.h"
 #include "samplers.h"
 #include "stripers.h"
@@ -124,8 +125,6 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
     return size_based_stripe_level_no_exts_dynamic_strategy_config;
   else if (confname == "size_based_whole_obj_config")
     return size_based_whole_obj_config;
-  // Predictive strategies TODO
-  // Randomization
   else if (confname == "age_based_config_no_exts")
     return age_based_config_no_exts;
   else if (confname == "age_based_rand_config_no_exts")
@@ -155,13 +154,13 @@ void run_simulator(const string confname, const ext_lst ext_sizes,
                    const float striping_cycle, const float deletion_cycle,
                    const unsigned long data_center_size, const float simul_time,
                    SimpleSampler &sampler, const int total_objs,
-                   bool save_to_file = true, bool record_ext_types = true) {
+                   bool save_to_file = true, bool record_ext_types = true, const int percent_correct = 100) {
   string file_basename = confname;
   int num_objs_per_cycle = total_objs / simul_time * striping_cycle;
   auto config = parse_config(confname);
   shared_ptr<SimpleSampler> samplerptr = make_shared<SimpleSampler>(sampler);
 
-  if (!config) {
+  if (!config && (confname != "mortal_immortal_no_exts_config")) {
     std::cerr << "Error: invalid config (" << confname
         << ") detected! Exiting..." << std::endl;
     exit(1);
@@ -169,7 +168,11 @@ void run_simulator(const string confname, const ext_lst ext_sizes,
 
   for (auto ext_size : ext_sizes) {
     std::cout << "Extent " << ext_size << std::endl;
-    auto dc = config(data_center_size, striping_cycle, simul_time, ext_size,
+    DataCenter dc = confname == "mortal_immortal_no_exts_config" ? 
+      mortal_immortal_no_exts_config(data_center_size, striping_cycle, simul_time, ext_size,
+                     primary_threshold, secondary_threshold, samplerptr,
+                     num_stripes_per_cycle, deletion_cycle, num_objs_per_cycle, percent_correct):
+      config(data_center_size, striping_cycle, simul_time, ext_size,
                      primary_threshold, secondary_threshold, samplerptr,
                      num_stripes_per_cycle, deletion_cycle, num_objs_per_cycle);
     auto res = dc.run_simulation();
@@ -188,7 +191,7 @@ int main(int argc, char *argv[]) {
   short threshold;
   string config;
 
-  if (argc == 4) {
+  if (argc >= 4) {
     config = argv[1];
     ext_size = atol(argv[2]);
     threshold = atol(argv[3]);
@@ -225,10 +228,16 @@ int main(int argc, char *argv[]) {
   ext_lst ext_sizes = {ext_size};
 
   std::cout << threshold << ", " << secondary_threshold << std::endl;
-
-  run_simulator(config, ext_sizes, threshold, secondary_threshold,
+  if(argc == 5)
+  {
+    run_simulator(config, ext_sizes, threshold, secondary_threshold,
+                num_stripes_per_cycle, striping_cycle, deletion_cycle,
+                data_center_size, simul_time, sampler, total_objs, atoi(argv[4]));
+  }else{
+    run_simulator(config, ext_sizes, threshold, secondary_threshold,
                 num_stripes_per_cycle, striping_cycle, deletion_cycle,
                 data_center_size, simul_time, sampler, total_objs);
-
+  }
+  
   return 0;
 }

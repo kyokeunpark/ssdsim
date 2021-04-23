@@ -1,12 +1,12 @@
 #ifndef __SAMPLERS_H_
 #define __SAMPLERS_H_
 
+#include "config.h"
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
-#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,7 +16,7 @@
 using sizes = std::vector<float>;
 using lives = std::vector<float>;
 using sample_pair = std::pair<sizes, lives>;
-static std::mt19937 generator;
+
 static inline int randint(int min, int max) {
   return (rand() % ((max + 1) - min)) + min;
 }

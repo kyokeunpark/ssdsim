@@ -4,7 +4,6 @@
 #include "extent_object_stripe.h"
 #include "samplers.h"
 #include <memory>
-#include <random>
 #include <unordered_map>
 
 using std::shared_ptr;
