@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
   const unsigned long data_center_size = 3500000 * (unsigned long)ave_obj_size;
   const float striping_cycle = 1.0 / 12.0;
   const float deletion_cycle = striping_cycle;
-  const float simul_time = 1;
+  const float simul_time = 365;
   const int num_objs = 1000000;
   const int percent_correct = argc == 5? atoi(argv[4]) : 100;
   // Flag to record information about ext size distributions - small object

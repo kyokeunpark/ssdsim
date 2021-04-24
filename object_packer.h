@@ -1702,8 +1702,34 @@ public:
   using AgeBasedObjectPacker::AgeBasedObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
                     float key = 0) override {
-    std::priority_queue<obj_pq_record> objs_lst =
-        std::priority_queue<obj_pq_record>();
+        list<obj_pq_record> objs_lst;
+    while (!obj_queue->empty()) {
+      obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
+      obj_queue->pop();
+      objs_lst.push_back(r);
+    }
+    while (objs_lst.size() > 0) {
+      int prev_key = std::get<0>(objs_lst.front());
+      obj_pq_record r = objs_lst.front();
+      vector<ExtentObject *> chunks;
+      while (std::get<0>(r) == prev_key && objs_lst.size() > 0) {
+        r = objs_lst.front();
+        objs_lst.pop_front();
+        for (int j = 0; j < std::get<2>(r) / 4; ++j) {
+          chunks.push_back(std::get<1>(r));
+        }
+        if (objs_lst.size() == 0) {
+          break;
+        }
+
+        r = objs_lst.front();
+      }
+
+      shuffle(chunks.begin(), chunks.end(), generator);
+      for (auto obj : chunks) {
+        add_obj_to_current_ext_at_key(extent_stack, obj, 4, 0);
+      }
+    }
   }
 };
 
