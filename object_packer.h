@@ -352,8 +352,9 @@ class RandomizedObjectPacker : public SimpleObjectPacker {
 public:
   using SimpleObjectPacker::SimpleObjectPacker;
 
-  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<ExtentObject *>& objs,
-                    float key = 0) override{
+  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
+                    std::set<ExtentObject *>& objs,
+                    float key = 0) override {
     std::vector<ExtentObject *> objs_lst = {};
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
@@ -362,8 +363,7 @@ public:
     }
     obj_pool->clear();
 
-    std::shuffle(objs_lst.begin(), objs_lst.end(), generator
-                 );
+    std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
     for (auto &record : objs_lst)
       this->add_obj_to_current_ext_at_key(extent_stack, record, 4, key);
   }
