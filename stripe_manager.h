@@ -69,5 +69,7 @@ public:
     return stripe;
   }
 
-  void delete_stripe(Stripe *stripe) { stripes->erase(stripe); }
+  void delete_stripe(Stripe *stripe) {
+    stripes->erase(stripe);
+  }
 };

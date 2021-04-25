@@ -1727,7 +1727,7 @@ public:
 
       shuffle(chunks.begin(), chunks.end(), generator);
       for (auto obj : chunks) {
-        add_obj_to_current_ext_at_key(extent_stack, obj, 4, 0);
+        add_obj_to_current_ext_at_key(extent_stack, obj, 4, key);
       }
     }
   }
