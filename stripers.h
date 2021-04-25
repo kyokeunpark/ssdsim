@@ -20,8 +20,8 @@ typedef struct stripe_costs {
 } str_costs;
 
 typedef struct replacement_costs {
-  int global_parity_reads;
-  int global_parity_writes;
+  double global_parity_reads;
+  double global_parity_writes;
   int local_parity_reads;
   int local_parity_writes;
   int obsolete_data_reads;

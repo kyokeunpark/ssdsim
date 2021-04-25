@@ -270,7 +270,8 @@ public:
     (*localities)[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;
     extents.remove(ext);
-    delete ext;
+    // delete ext;
+    //ext might get reused in StripeLevelWithExtsGCStrategy
     free_space += 1;
   }
 };
