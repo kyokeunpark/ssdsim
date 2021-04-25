@@ -181,6 +181,7 @@ public:
       }
     }
     this->obj_mngr->remove_object(obj);
+    delete obj;
     return ret;
   }
 

@@ -221,9 +221,14 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
-      stripe_set.erase(d);
-    }
+      for (Stripe *s : deleted) {
+        // if(s)
+        // {
+        //   delete s;
+        //   s = nullptr;
+        // }
+        stripe_set.erase(s);
+      }
     return ret;
   }
 };
@@ -369,9 +374,15 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
-      stripe_set.erase(d);
+    for (Stripe *s : deleted) {
+      // if(s)
+      // {
+      //   delete s;
+      //   s = nullptr;
+      // }
+      stripe_set.erase(s);
     }
+
     return ret;
   };
 
@@ -446,7 +457,7 @@ public:
       return ret;
     }
 
-    gc_handler_ret gc_handler(set<Stripe *> &stripe_set) override {
+    gc_handler_ret gc_handler(set<Stripe *>& stripe_set) override {
       struct gc_handler_ret ret;
       set<Stripe *> deleted;
       vector<Stripe *> stripe_lst = sorted_stripe_set(stripe_set);
@@ -484,9 +495,13 @@ public:
           ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
         }
       }
-      for (Stripe *d : deleted) {
-        stripe_set.erase(d);
-        delete d;
+      for (Stripe *s : deleted) {
+        // if(s)
+        // {
+        //   delete s;
+        //   s = nullptr;
+        // }
+        stripe_set.erase(s);
       }
       // std::cout << "reclaimed_space" <<ret.reclaimed_space << std::endl;
       // std::cout << "total_num_exts_replaced" <<ret.total_num_exts_replaced << std::endl;
