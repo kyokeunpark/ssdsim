@@ -486,6 +486,7 @@ public:
       }
       for (Stripe *d : deleted) {
         stripe_set.erase(d);
+        delete d;
       }
       // std::cout << "reclaimed_space" <<ret.reclaimed_space << std::endl;
       // std::cout << "total_num_exts_replaced" <<ret.total_num_exts_replaced << std::endl;
