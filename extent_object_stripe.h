@@ -35,7 +35,11 @@ public:
         creation_time(time(nullptr)), shards(new list<Extent_Object_Shard *>()),
         extents(list<Extent *>()) {}
 
-  ~ExtentObject() { delete shards; }
+  ~ExtentObject() {
+    for (auto & it : *shards)
+      delete it;
+    delete shards;
+  }
 
   float get_timestamp() { return creation_time; }
 
@@ -98,7 +102,10 @@ public:
         locality(0), generation(0), timestamp(configtime), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
-  ~Extent() { delete objects; }
+  ~Extent() {
+    this->delete_ext();
+    delete objects;
+  }
 
   double get_age() { return difftime(time(nullptr), timestamp); }
 
@@ -251,6 +258,7 @@ public:
     (*localities)[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;
     extents.remove(ext);
+    delete ext;
     free_space += 1;
   }
 };

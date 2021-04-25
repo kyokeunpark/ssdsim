@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
   const float deletion_cycle = striping_cycle;
   const float simul_time = 365;
   const int num_objs = 1000000;
-  const int percent_correct = argc == 5? atoi(argv[4]) : 100;
+  const int percent_correct = argc == 5 ? atoi(argv[4]) : 100;
   // Flag to record information about ext size distributions - small object
   // extents, large obj exts, etc
   const bool record_ext_types = false;
