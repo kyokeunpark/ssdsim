@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #pragma once
 
 #include "extent_manager.h"
@@ -428,13 +429,13 @@ public:
     }
 
     if (new_objs_added) {
-      object_lst obj_lst = {};
+      object_lst* obj_lst =new object_lst();
       for (auto &record : *obj_pool) {
         float rem_size = record.second;
         for (int i = 0; i < rem_size / 4 + round((fmod(rem_size, 4)) / 4.0); i++)
-          obj_lst.emplace_back(std::make_pair(record.first, 4));
+          obj_lst->emplace_back(std::make_pair(record.first, 4));
         obj_pool->clear(); // TODO: Might not be necessary?
-        *this->obj_pool = obj_lst;
+        this->obj_pool.reset(obj_lst);
         std::shuffle(obj_pool->begin(), obj_pool->end(),
                      generator);
       }
@@ -472,14 +473,14 @@ public:
     }
 
     // Mix valid and fresh objects
-    object_lst obj_lst = {};
+    object_lst * obj_lst = new object_lst();
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4.0 + round(fmod(rem_size, 4) / 4.0); i++)
-        obj_lst.emplace_back(std::make_pair(record.first, 4));
+        obj_lst->emplace_back(std::make_pair(record.first, 4));
     }
     obj_pool->clear();
-    *this->obj_pool = obj_lst;
+    this->obj_pool.reset(obj_lst);
     std::shuffle(obj_pool->begin(), obj_pool->end(),
                  generator);
 
