@@ -78,7 +78,6 @@ public:
 
   //unordered_map<obj_ptr, list<shard_ptr>> objects;
   unordered_map<obj_ptr, list<float>> objects;
-  unordered_map<int, vector<float>> obj_ids_to_obj_size;
   stripe_ptr stripe;
   int locality;
   int generation;
@@ -109,7 +108,7 @@ public:
   double get_age() { return difftime(time(nullptr), timestamp); }
 
   float get_obj_size(obj_ptr obj) {
-    auto sizes = this->obj_ids_to_obj_size[obj->id];
+    auto sizes = this->objects[obj];
     return std::accumulate(sizes.begin(), sizes.end(), 0);
   }
 
@@ -128,14 +127,9 @@ public:
     else if (generation > this->generation)
       this->generation = obj->generation;
 
-    if (this->obj_ids_to_obj_size.find(obj_id) !=
-        this->obj_ids_to_obj_size.end()) {
-      this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
-      // shard_ptr new_shard = make_shared<Extent_Object_Shard>(temp_size);
+    if (this->objects.find(obj) != this->objects.end()) {
       obj->shards.push_back(temp_size);
     } else {
-      this->obj_ids_to_obj_size[obj_id] = {temp_size};
-      // shard_ptr new_shard = make_shared<Extent_Object_Shard>(temp_size);
       obj->shards.push_back(temp_size);
       obj->add_extent(shared_from_this());
       auto shard_lst = list<float>();
@@ -150,15 +144,13 @@ public:
     for (auto obj : this->objects)
       obj.first->remove_extent(shared_from_this());
     this->objects.clear();
-    this->obj_ids_to_obj_size.clear();
   }
 
   double del_object(obj_ptr obj) { 
-    auto it = obj_ids_to_obj_size.find(obj->id);
-    if (it != obj_ids_to_obj_size.end()) {
-      obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(),
-                                        obj_ids_to_obj_size[obj->id].end(), 0);
-      obj_ids_to_obj_size.erase(obj->id);
+    auto it = this->objects.find(obj);
+    if (it != this->objects.end()) {
+      this->obsolete_space += std::accumulate(it->second.begin(), it->second.end(), 0);
+      this->objects.erase(obj);
     }
     return obsolete_space / ext_size * 100;
   }
@@ -175,7 +167,7 @@ public:
       ret.push_back(std::make_pair(it.first, sum));
     }
 
-    for (auto & it : obj_ids_to_obj_size) {
+    for (auto & it : objects) {
       float sum = 0;
       for (auto shard : it.second)
         sum += shard;

@@ -164,8 +164,8 @@ public:
   string get_extent_type(ext_ptr extent) {
     // Find the largest object stored in the extent
     float largest_obj = -1, local_max = 0;
-    for (auto &tuple : extent->obj_ids_to_obj_size) {
-      std::vector<float> sizes = tuple.second;
+    for (auto &tuple : extent->objects) {
+      std::list<float> sizes = tuple.second;
       local_max = std::accumulate(sizes.begin(), sizes.end(), 0);
       if (largest_obj < local_max) {
         largest_obj = local_max;
