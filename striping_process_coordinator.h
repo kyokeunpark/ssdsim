@@ -30,11 +30,11 @@ public:
         gc_striper(gc_s), extent_stack(e_s), gc_extent_stack(gc_e_s),
         stripe_manager(s_m), simulation_time(s_t) {}
 
-  void gc_extent(Extent *ext, std::set<ExtentObject *> objs) {
+  void gc_extent(ext_ptr ext, std::set<obj_ptr> objs) {
     gc_object_packer->gc_extent(ext, gc_extent_stack, objs);
   }
 
-  virtual Extent *get_gc_extent(float key = 0) {
+  virtual ext_ptr get_gc_extent(float key = 0) {
     if (gc_extent_stack->get_length_at_key(key) > 0) {
       return gc_extent_stack->get_extent_at_key(key);
     }
@@ -75,9 +75,9 @@ public:
   int get_length_gc_extent_stack() {
     return gc_extent_stack->get_length_of_extent_stack();
   }
-  void del_sealed_extent(Extent *extent) {
+  void del_sealed_extent(ext_ptr extent) {
     auto objs = extent->delete_ext();
-    auto temp = std::set<ExtentObject*>();
+    auto temp = std::set<obj_ptr>();
     if (extent_stack->contains_extent(extent)) {
       extent_stack->remove_extent(extent);
       object_packer->add_objs(objs);
@@ -89,7 +89,7 @@ public:
     }
   }
 
-  bool extent_in_extent_stacks(Extent *extent) {
+  bool extent_in_extent_stacks(ext_ptr extent) {
     return extent_stack->contains_extent(extent) ||
            gc_extent_stack->contains_extent(extent);
   }
@@ -106,7 +106,7 @@ public:
     return array<double, 2>{num_times_default * 100.0 / total,
                             num_times_alternative * 100.0 / total};
   }
-  virtual Extent *get_extent(float key) {
+  virtual ext_ptr get_extent(float key) {
     if (this->extent_stack->get_length_at_key(key) > 0) {
       return this->extent_stack->get_extent_at_key(key);
     } else {
@@ -150,7 +150,7 @@ public:
       : StripingProcessCoordinator(o_p, gc_o_p, s, gc_s, e_s, gc_e_s, s_m, s_t),
         default_key(key) {}
 
-  Extent *get_extent(float key) override {
+  ext_ptr get_extent(float key) override {
     if (this->extent_stack->get_length_at_key(key) > 0) {
       return this->extent_stack->get_extent_at_key(key);
     } else {
@@ -163,7 +163,7 @@ public:
       }
     }
   }
-  Extent *get_gc_extent(float key) override {
+  ext_ptr get_gc_extent(float key) override {
     if (this->gc_extent_stack->get_length_at_key(key) > 0) {
       return this->gc_extent_stack->get_extent_at_key(key);
     } else {

@@ -8,7 +8,7 @@
 
 using std::shared_ptr;
 using std::unordered_map;
-using obj_record = std::pair<ExtentObject *, float>;
+using obj_record = std::pair<obj_ptr, float>;
 using object_lst = std::vector<obj_record>;
 
 class ObjectManager {
@@ -16,13 +16,13 @@ public:
   int max_id;
   shared_ptr<EventManager> event_manager;
   shared_ptr<Sampler> sampler;
-  unordered_map<int, ExtentObject *> objects;
+  unordered_map<int, obj_ptr> objects;
   bool add_noise;
 
   ObjectManager() {}
   ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
                 bool a_n = true)
-      : objects(unordered_map<int, ExtentObject *>()),
+      : objects(unordered_map<int, obj_ptr>()),
         event_manager(e_m), sampler(s),
         add_noise(a_n) {
     max_id = 0;
@@ -45,7 +45,7 @@ public:
         life += noise / 24.0;
       }
       life += configtime;
-      ExtentObject *obj = new ExtentObject(max_id, size, life);
+      obj_ptr obj = make_shared<ExtentObject>(max_id, size, life);
       new_objs.emplace_back(std::make_pair(obj, size));
       this->objects[max_id] = obj;
       max_id++;
@@ -54,7 +54,7 @@ public:
     return new_objs;
   }
 
-  ExtentObject *get_object(int obj_id) {
+  obj_ptr get_object(int obj_id) {
     if (this->objects.find(obj_id) != this->objects.end())
       return this->objects[obj_id];
     return nullptr;
@@ -62,7 +62,7 @@ public:
 
   int get_num_objs() { return objects.size(); }
 
-  void remove_object(ExtentObject *obj) {
+  void remove_object(obj_ptr obj) {
     objects.erase(obj->id);
   }
 

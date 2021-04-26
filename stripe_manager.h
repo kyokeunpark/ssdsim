@@ -8,7 +8,7 @@
 // getters not implemented since variables are public
 class StripeManager {
 public:
-  std::set<Stripe *> *stripes;
+  std::set<stripe_ptr> *stripes;
   int num_data_exts_per_locality;
   float num_local_parities;
   float num_global_parities;
@@ -21,7 +21,7 @@ public:
   StripeManager(int num_data_extents, float num_local_parities,
                 float num_global_parities, int num_localities_in_stripe,
                 float coding_overhead = -1)
-      : stripes(new std::set<Stripe *>()),
+      : stripes(new std::set<stripe_ptr>()),
         num_data_exts_per_locality(num_data_extents),
         num_local_parities(num_local_parities),
         num_global_parities(num_global_parities),
@@ -43,7 +43,7 @@ public:
 
   double get_data_dc_size() {
     int dc_size = 0;
-    for (Stripe *stripe : *stripes) {
+    for (auto stripe : *stripes) {
       dc_size += stripe->ext_size * num_data_exts_per_stripe;
     }
     // fprintf(stderr, "dc size: %f %d\n", configtime, dc_size);
@@ -58,16 +58,18 @@ public:
 
   int get_num_stripes() { return stripes->size(); }
 
-  Stripe *create_new_stripe(int ext_size) {
+  stripe_ptr create_new_stripe(int ext_size) {
     // not translated if block since ext_size local variable cant be found
     // or assigned anywhere else in stripe manager object!! if (ext_size is
     // None):
     //  ext_size = self.ext_size
-    Stripe *stripe = new Stripe(max_id++, num_data_exts_per_locality,
+    stripe_ptr stripe = make_shared<Stripe>(max_id++, num_data_exts_per_locality,
                                 num_localities_in_stripe, ext_size, 15);
     stripes->insert(stripe);
     return stripe;
   }
 
-  void delete_stripe(Stripe *stripe) { stripes->erase(stripe); }
+  void delete_stripe(stripe_ptr stripe) {
+    stripes->erase(stripe);
+  }
 };

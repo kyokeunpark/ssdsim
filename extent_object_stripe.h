@@ -1,6 +1,7 @@
 #pragma once
 #include "config.h"
 #include "extent_object_shard.h"
+#include <memory>
 #include <ctime>
 #include <iostream>
 #include <list>
@@ -15,10 +16,15 @@ using std::list;
 using std::string;
 using std::unordered_map;
 using std::vector;
-using obj_record = std::pair<ExtentObject *, float>;
+using std::make_shared;
+using shard_ptr = std::shared_ptr<Extent_Object_Shard>;
+using obj_ptr = std::shared_ptr<ExtentObject>;
+using ext_ptr = std::shared_ptr<Extent>;
+using stripe_ptr = std::shared_ptr<Stripe>;
+using obj_record = std::pair<obj_ptr, float>;
 using object_lst = std::vector<obj_record>;
 
-class ExtentObject {
+class ExtentObject: public std::enable_shared_from_this<ExtentObject> {
 protected:
 public:
   int id;
@@ -27,19 +33,13 @@ public:
   int generation;
   time_t creation_time;
   int num_times_gced;
-  list<Extent_Object_Shard *> *shards;
-  list<Extent *> extents;
+  list<float> shards;
+  list<ext_ptr> extents;
 
   ExtentObject(int id, float s, float l)
       : id(id), size(s), life(l), generation(0), num_times_gced(0),
-        creation_time(time(nullptr)), shards(new list<Extent_Object_Shard *>()),
-        extents(list<Extent *>()) {}
-
-  ~ExtentObject() {
-    for (auto & it : *shards)
-      delete it;
-    delete shards;
-  }
+        creation_time(time(nullptr)), shards(list<float>()),
+        extents(list<ext_ptr>()) {}
 
   float get_timestamp() { return creation_time; }
 
@@ -47,16 +47,16 @@ public:
 
   float get_size() {
     float sum = 0;
-    for (auto shard : *this->shards)
-      sum += shard->shard_size;
+    for (auto shard : this->shards)
+      sum += shard;
     return sum;
   }
 
   double get_age() { return difftime(time(nullptr), creation_time); }
 
-  void add_extent(Extent *e) { this->extents.emplace_back(e); }
+  void add_extent(ext_ptr e) { this->extents.emplace_back(e); }
 
-  void remove_extent(Extent *e) {
+  void remove_extent(ext_ptr e) {
     for (auto it = this->extents.begin(); it != this->extents.end(); it++) {
       if (*it == e) {
         this->extents.erase(it);
@@ -69,16 +69,17 @@ public:
   float get_generation() { return generation; }
 };
 
-class Extent {
+class Extent: public std::enable_shared_from_this<Extent> {
 public:
   double obsolete_space;
   double free_space;
   int id;
   double ext_size;
 
-  unordered_map<ExtentObject *, list<Extent_Object_Shard *>> *objects;
+  //unordered_map<obj_ptr, list<shard_ptr>> objects;
+  unordered_map<obj_ptr, list<float>> objects;
   unordered_map<int, vector<float>> obj_ids_to_obj_size;
-  Stripe *stripe;
+  stripe_ptr stripe;
   int locality;
   int generation;
   float timestamp;
@@ -97,26 +98,24 @@ public:
 
   Extent(double e_s, int s_t, int i)
       : obsolete_space(0), free_space(e_s), ext_size(e_s), id(i),
-        objects(
-            new unordered_map<ExtentObject *, list<Extent_Object_Shard *>>()),
+        objects(unordered_map<obj_ptr, list<float>>()),
         locality(0), generation(0), timestamp(configtime), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
   ~Extent() {
     this->delete_ext();
-    delete objects;
   }
 
   double get_age() { return difftime(time(nullptr), timestamp); }
 
-  float get_obj_size(ExtentObject *obj) {
+  float get_obj_size(obj_ptr obj) {
     auto sizes = this->obj_ids_to_obj_size[obj->id];
     return std::accumulate(sizes.begin(), sizes.end(), 0);
   }
 
   double get_obsolete_percentage() { return obsolete_space / ext_size * 100; }
 
-  float add_object(ExtentObject *obj, float size, int generation = 0) {
+  float add_object(obj_ptr obj, float size, int generation = 0) {
     float temp_size = size < free_space ? size : free_space;
     int obj_id = obj->id;
     if (timestamp == 0)
@@ -132,34 +131,33 @@ public:
     if (this->obj_ids_to_obj_size.find(obj_id) !=
         this->obj_ids_to_obj_size.end()) {
       this->obj_ids_to_obj_size[obj_id].emplace_back(temp_size);
-      Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
-      obj->shards->push_back(new_shard);
+      // shard_ptr new_shard = make_shared<Extent_Object_Shard>(temp_size);
+      obj->shards.push_back(temp_size);
     } else {
       this->obj_ids_to_obj_size[obj_id] = {temp_size};
-      Extent_Object_Shard *new_shard = new Extent_Object_Shard(temp_size);
-      obj->shards->push_back(new_shard);
-      obj->add_extent(this);
-      this->objects->emplace(
-          std::make_pair(obj, list<Extent_Object_Shard *>()));
-      this->objects->find(obj)->second.push_back(new_shard);
+      // shard_ptr new_shard = make_shared<Extent_Object_Shard>(temp_size);
+      obj->shards.push_back(temp_size);
+      obj->add_extent(shared_from_this());
+      auto shard_lst = list<float>();
+      shard_lst.push_back(temp_size);
+      this->objects.emplace(std::make_pair(obj, shard_lst));
     }
     free_space -= temp_size;
     return temp_size;
   }
 
   void remove_objects() {
-    for (auto obj : *this->objects)
-      obj.first->remove_extent(this);
-    this->objects->clear();
+    for (auto obj : this->objects)
+      obj.first->remove_extent(shared_from_this());
+    this->objects.clear();
     this->obj_ids_to_obj_size.clear();
   }
 
-  double del_object(ExtentObject *obj) { 
-    auto it = objects->find(obj);
-    
-    if (it != objects->end()) {
-      obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(), obj_ids_to_obj_size[obj->id].end(), 0);
-      objects->erase(it);
+  double del_object(obj_ptr obj) { 
+    auto it = obj_ids_to_obj_size.find(obj->id);
+    if (it != obj_ids_to_obj_size.end()) {
+      obsolete_space += std::accumulate(obj_ids_to_obj_size[obj->id].begin(),
+                                        obj_ids_to_obj_size[obj->id].end(), 0);
       obj_ids_to_obj_size.erase(obj->id);
     }
     return obsolete_space / ext_size * 100;
@@ -168,17 +166,20 @@ public:
   object_lst delete_ext() {
     object_lst ret;
 
-    for (auto &it : *objects) {
+    for (auto & it : objects) {
       float sum = 0;
-      for (Extent_Object_Shard *s : it.second) {
-        sum += s->shard_size;
+      for (auto s : it.second) {
+        sum += s;
       }
-      it.first->extents.remove(this);
+      it.first->extents.remove(shared_from_this());
       ret.push_back(std::make_pair(it.first, sum));
     }
-    
-    objects->clear();
-    obj_ids_to_obj_size.clear();
+
+    for (auto & it : obj_ids_to_obj_size) {
+      float sum = 0;
+      for (auto shard : it.second)
+        sum += shard;
+    }
 
     generation = 0;
     free_space = ext_size;
@@ -186,7 +187,7 @@ public:
   }
 };
 
-class Stripe {
+class Stripe: public std::enable_shared_from_this<Stripe> {
 public:
   int id;
   double obsolete;
@@ -198,7 +199,7 @@ public:
   double timestamp;
   int stripe_size;
   int primary_threshold;
-  list<Extent *> extents;
+  list<ext_ptr> extents;
 
   Stripe(int id, int num_data_extents_per_locality, int num_localities,
          int ext_size, int primary_threshold)
@@ -207,7 +208,7 @@ public:
         free_space(num_localities * num_data_extents_per_locality),
         localities(new vector<int>(num_localities, 0)), ext_size(ext_size),
         timestamp(0), primary_threshold(primary_threshold),
-        extents(list<Extent *>()) {
+        extents(list<ext_ptr>()) {
     this->stripe_size = 0;
     for (int i = 0; i < num_data_blocks * num_localities; ++i) {
       this->stripe_size += ext_size;
@@ -233,10 +234,10 @@ public:
 
   int get_num_data_exts() { return num_data_blocks * num_localities; }
 
-  void add_extent(Extent *ext) {
+  void add_extent(ext_ptr ext) {
     if (free_space > 0) {
       extents.push_back(ext);
-      ext->stripe = this;
+      ext->stripe = shared_from_this();
       free_space -= 1;
       int locality = 0;
       while ((*localities)[locality] == num_data_blocks) {
@@ -252,13 +253,12 @@ public:
     }
   }
 
-  void del_extent(Extent *ext) {
+  void del_extent(ext_ptr ext) {
     ext->stripe = nullptr;
     ext->remove_objects();
     (*localities)[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;
     extents.remove(ext);
-    delete ext;
     free_space += 1;
   }
 };

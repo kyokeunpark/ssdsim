@@ -38,7 +38,7 @@ struct stripe_gc_ret {
         storage_node_to_parity_calculator = 0, num_exts_replaced = 0;
   space_ext_type_map reclaimed_space_by_ext_types = space_ext_type_map();
 };
-inline bool stripe_cmpr(Stripe *s1, Stripe *s2) { return s1->id < s2->id; }
+inline bool stripe_cmpr(stripe_ptr s1, stripe_ptr s2) { return s1->id < s2->id; }
 class GarbageCollectionStrategy {
 protected:
   short primary_threshold, secondary_threshold;
@@ -82,12 +82,12 @@ public:
   }
 
   // Defines the strategy for gc on a single stripe
-  virtual stripe_gc_ret stripe_gc(Stripe *stripe) = 0;
+  virtual stripe_gc_ret stripe_gc(stripe_ptr stripe) = 0;
   // Mechanism for determining which stripes are ready for gc
-  virtual gc_handler_ret gc_handler(set<Stripe *> &stripe_set) = 0;
+  virtual gc_handler_ret gc_handler(set<stripe_ptr> &stripe_set) = 0;
 
-  vector<Stripe *> sorted_stripe_set(set<Stripe *> &stripes) {
-    std::vector<Stripe *> v(stripes.begin(), stripes.end());
+  vector<stripe_ptr> sorted_stripe_set(set<stripe_ptr> &stripes) {
+    std::vector<stripe_ptr> v(stripes.begin(), stripes.end());
     std::sort(v.begin(), v.end(), stripe_cmpr);
     return v;
   }
@@ -106,7 +106,7 @@ public:
       : GarbageCollectionStrategy(p_thresh, s_thresh, eman, s_p_c, striper),
         stripe_manager(s_m) {}
 
-  stripe_gc_ret stripe_gc(Stripe *stripe) override {
+  stripe_gc_ret stripe_gc(stripe_ptr stripe) override {
     stripe_gc_ret ret;
     vector<int> exts_per_locality;
     vector<int> obs_data_per_locality;
@@ -117,11 +117,11 @@ public:
       valid_objs_per_locality.push_back(0);
     }
     add_num_gc_cycles(1);
-    set<ExtentObject *> objs;
+    set<obj_ptr> objs;
     set<int> local_parities;
-    std::list<Extent *> extent_list = stripe->extents;
+    std::list<ext_ptr > extent_list = stripe->extents;
     space_ext_type_map reclaimed_space_by_ext_types;
-    for (Extent *ext : extent_list) {
+    for (ext_ptr ext : extent_list) {
       assert(ext->get_obsolete_percentage() <= 100);
       ret.temp_space += ext->obsolete_space;
       double valid_objs = ext->ext_size - ext->obsolete_space;
@@ -181,10 +181,10 @@ public:
     return ret;
   }
 
-  gc_handler_ret gc_handler(set<Stripe *> &stripe_set) override {
+  gc_handler_ret gc_handler(set<stripe_ptr> &stripe_set) override {
     struct gc_handler_ret ret;
-    set<Stripe *> deleted;
-    vector<Stripe *> stripe_lst = sorted_stripe_set(stripe_set);
+    set<stripe_ptr> deleted;
+    vector<stripe_ptr> stripe_lst = sorted_stripe_set(stripe_set);
     for (auto stripe : stripe_lst) {
       // what should obsolete's type be? pr what type should get
       // percentage return?
@@ -221,7 +221,7 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
+    for (auto d : deleted) {
       stripe_set.erase(d);
     }
     return ret;
@@ -232,7 +232,7 @@ class StripeLevelWithExtsGCStrategy : public GarbageCollectionStrategy {
 public:
   using GarbageCollectionStrategy::GarbageCollectionStrategy;
 
-  bool filter_ext(Extent *ext) {
+  bool filter_ext(ext_ptr ext) {
     return ext->get_obsolete_percentage() >= secondary_threshold;
   }
 
@@ -241,9 +241,9 @@ public:
     float user_writes;
     gc_ext_res(float r, float w) : user_reads(r), user_writes(w) {}
   };
-  gc_ext_res gc_ext(Extent *ext, Stripe *stripe) {
+  gc_ext_res gc_ext(ext_ptr ext, stripe_ptr stripe) {
     float key = extent_manager->get_key(ext);
-    Extent *temp_ext =
+    ext_ptr temp_ext =
         striping_process_coordinator->get_gc_extent(key);
     if (temp_ext == nullptr) {
       temp_ext =
@@ -257,7 +257,7 @@ public:
     return gc_ext_res(user_writes, user_reads);
   }
 
-  stripe_gc_ret stripe_gc(Stripe *stripe) override {
+  stripe_gc_ret stripe_gc(stripe_ptr stripe) override {
     stripe_gc_ret ret;
     vector<int> exts_per_locality;
     vector<int> obs_data_per_locality;
@@ -268,12 +268,12 @@ public:
       valid_objs_per_locality.push_back(0);
     }
     add_num_gc_cycles(1);
-    set<ExtentObject *> objs;
+    set<obj_ptr> objs;
     set<int> local_parities;
-    list<Extent *> extent_list = stripe->extents;
+    list<ext_ptr > extent_list = stripe->extents;
     int ext_size = 0;
     space_ext_type_map reclaimed_space_by_ext_types;
-    for (Extent *ext : extent_list) {
+    for (ext_ptr ext : extent_list) {
       if (filter_ext(ext)) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
@@ -328,10 +328,10 @@ public:
     return ret;
   }
 
-  gc_handler_ret gc_handler(set<Stripe *> &stripe_set) override {
+  gc_handler_ret gc_handler(set<stripe_ptr> &stripe_set) override {
     struct gc_handler_ret ret;
-    set<Stripe *> deleted;
-    vector<Stripe *> stripe_lst = sorted_stripe_set(stripe_set);
+    set<stripe_ptr> deleted;
+    vector<stripe_ptr> stripe_lst = sorted_stripe_set(stripe_set);
     for (auto stripe : stripe_lst) {
       // what should obsolete's type be? pr what type should get
       // percentage return?
@@ -368,9 +368,8 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
+    for (stripe_ptr d : deleted)
       stripe_set.erase(d);
-    }
     return ret;
   };
 
@@ -390,7 +389,7 @@ public:
         : GarbageCollectionStrategy(p_thresh, s_thresh, eman, s_p_c, striper),
           stripe_manager(s_m) {}
 
-    stripe_gc_ret stripe_gc(Stripe *stripe) override {
+    stripe_gc_ret stripe_gc(stripe_ptr stripe) override {
       stripe_gc_ret ret;
       vector<int> exts_per_locality;
       vector<int> obs_data_per_locality;
@@ -401,11 +400,11 @@ public:
         valid_objs_per_locality.push_back(0);
       }
       add_num_gc_cycles(1);
-      set<ExtentObject *> objs;
-      list<Extent *> extent_list = stripe->extents;
+      set<obj_ptr> objs;
+      list<ext_ptr > extent_list = stripe->extents;
       space_ext_type_map reclaimed_space_by_ext_types;
       set<int> local_parities;
-      for (Extent *ext : extent_list) {
+      for (ext_ptr ext : extent_list) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
         double valid_objs = ext->ext_size - ext->obsolete_space;
@@ -445,10 +444,10 @@ public:
       return ret;
     }
 
-    gc_handler_ret gc_handler(set<Stripe *> &stripe_set) override {
+    gc_handler_ret gc_handler(set<stripe_ptr> &stripe_set) override {
       struct gc_handler_ret ret;
-      set<Stripe *> deleted;
-      vector<Stripe *> stripe_lst = sorted_stripe_set(stripe_set);
+      set<stripe_ptr> deleted;
+      vector<stripe_ptr> stripe_lst = sorted_stripe_set(stripe_set);
       for (auto stripe : stripe_lst) {
         double obsolete = stripe->get_obsolete_percentage();
         if (obsolete >= primary_threshold && stripe != nullptr) {
@@ -483,9 +482,8 @@ public:
           ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
         }
       }
-      for (Stripe *d : deleted) {
+      for (auto d : deleted)
         stripe_set.erase(d);
-      }
       // std::cout << "reclaimed_space" <<ret.reclaimed_space << std::endl;
       // std::cout << "total_num_exts_replaced" <<ret.total_num_exts_replaced << std::endl;
       striping_process_coordinator->generate_exts();
