@@ -129,6 +129,7 @@ public:
 
     if (this->objects.find(obj) != this->objects.end()) {
       obj->shards.push_back(temp_size);
+      this->objects[obj].emplace_back(temp_size);
     } else {
       obj->shards.push_back(temp_size);
       obj->add_extent(shared_from_this());
