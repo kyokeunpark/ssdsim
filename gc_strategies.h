@@ -145,7 +145,7 @@ public:
       striping_process_coordinator->gc_extent(ext, objs);
       exts_per_locality[ext->locality] += 1;
       obs_data_per_locality[ext->locality] += ext->obsolete_space;
-      if (local_parities.find(ext->locality) != local_parities.end()) {
+      if (local_parities.find(ext->locality) == local_parities.end()) {
         local_parities.insert(ext->locality);
       }
       ret.num_exts_replaced += 1;
@@ -277,6 +277,7 @@ public:
       if (filter_ext(ext)) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
+        ext_size = ext->ext_size;
         double valid_objs = ext->ext_size - ext->obsolete_space;
         if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
           ext_types_to_cost[ext->type] += valid_objs * 2;
