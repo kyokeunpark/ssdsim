@@ -380,14 +380,17 @@ public:
     // global parity) / just data extents
     float coding_overhead = this->stripe_mngr->coding_overhead;
     ret.total_user_data_writes = ret.total_user_data_reads * coding_overhead;
-    double total_user_bandwidth =
+    long double total_user_bandwidth =
         ret.total_user_data_reads + ret.total_user_data_writes;
-    ret.total_bandwidth =
-        eh.total_absent_data_reads + eh.total_global_parity_reads +
-        eh.total_global_parity_writes + eh.total_local_parity_reads +
-        eh.total_local_parity_writes + eh.total_obsolete_data_reads +
-        eh.total_storage_node_to_parity_calculator + eh.new_obj_reads +
-        eh.new_obj_writes;
+    ret.total_bandwidth = eh.total_absent_data_reads;
+    ret.total_bandwidth += eh.total_global_parity_reads;
+    ret.total_bandwidth += eh.total_global_parity_writes;
+    ret.total_bandwidth += eh.total_local_parity_reads;
+    ret.total_bandwidth += eh.total_local_parity_writes;
+    ret.total_bandwidth += eh.total_obsolete_data_reads;
+    ret.total_bandwidth += eh.total_storage_node_to_parity_calculator;
+    ret.total_bandwidth += eh.new_obj_reads;
+    ret.total_bandwidth += eh.new_obj_writes;
 
     ret.parity_reads =
         eh.total_global_parity_reads + eh.total_local_parity_reads;
