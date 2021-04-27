@@ -41,5 +41,5 @@ public:
     return ret;
   }
 
-  void delete_extent(Extent *extent) { exts.erase(extent); }
+  void delete_extent(Extent *extent) { exts.erase(extent);}
 };

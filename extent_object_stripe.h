@@ -36,9 +36,13 @@ public:
         extents(list<Extent *>()) {}
 
   ~ExtentObject() {
-    for (auto & it : *shards)
-      delete it;
-    delete shards;
+    if(shards != nullptr)
+    {
+      for(auto s: *shards){
+      delete s;}
+      delete shards;
+      shards = nullptr;
+    }
   }
 
   float get_timestamp() { return creation_time; }
@@ -103,8 +107,16 @@ public:
         secondary_threshold(s_t), stripe(nullptr) {}
 
   ~Extent() {
-    this->delete_ext();
-    delete objects;
+    for(auto o: *objects){
+      ExtentObject* tmp=o.first;
+      if(tmp != nullptr)
+      {
+        delete tmp;
+        tmp = nullptr;
+      }
+      
+    }
+    delete objects; 
   }
 
   double get_age() { return difftime(time(nullptr), timestamp); }
@@ -199,7 +211,7 @@ public:
   int stripe_size;
   int primary_threshold;
   list<Extent *> extents;
-
+  ~Stripe(){if(localities){delete localities; localities = nullptr;}}
   Stripe(int id, int num_data_extents_per_locality, int num_localities,
          int ext_size, int primary_threshold)
       : id(id), obsolete(0), num_data_blocks(num_data_extents_per_locality),
@@ -258,7 +270,8 @@ public:
     (*localities)[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;
     extents.remove(ext);
-    delete ext;
+    // delete ext;
+    //ext might get reused in StripeLevelWithExtsGCStrategy
     free_space += 1;
   }
 };

@@ -20,7 +20,7 @@ public:
 
   StripeManager(int num_data_extents, float num_local_parities,
                 float num_global_parities, int num_localities_in_stripe,
-                float coding_overhead = -1)
+                float coding_overhead)
       : stripes(new std::set<Stripe *>()),
         num_data_exts_per_locality(num_data_extents),
         num_local_parities(num_local_parities),
@@ -32,7 +32,7 @@ public:
         num_local_parities + num_global_parities;
     num_data_exts_per_stripe =
         num_data_extents * num_localities_in_stripe;
-    if (coding_overhead == -1) {
+    if (coding_overhead == 0) {
       this->coding_overhead = (num_global_parities + num_local_parities +
                                num_data_exts_per_stripe) /
                               num_data_exts_per_stripe;
@@ -69,5 +69,7 @@ public:
     return stripe;
   }
 
-  void delete_stripe(Stripe *stripe) { stripes->erase(stripe); }
+  void delete_stripe(Stripe *stripe) {
+    stripes->erase(stripe);
+  }
 };

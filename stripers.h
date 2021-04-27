@@ -20,8 +20,8 @@ typedef struct stripe_costs {
 } str_costs;
 
 typedef struct replacement_costs {
-  int global_parity_reads;
-  int global_parity_writes;
+  double global_parity_reads;
+  double global_parity_writes;
   int local_parity_reads;
   int local_parity_writes;
   int obsolete_data_reads;
@@ -245,12 +245,12 @@ public:
         costs.local_parity_reads += ext_size;
         costs.local_parity_writes += ext_size;
       }
-      costs.global_parity_reads +=
-          stripe_manager->num_global_parities * ext_size;
-      costs.global_parity_writes +=
-          stripe_manager->num_global_parities * ext_size;
-      num_times_default += 1;
     }
+    costs.global_parity_reads +=
+          stripe_manager->num_global_parities * ext_size;
+    costs.global_parity_writes +=
+          stripe_manager->num_global_parities * ext_size;
+    num_times_default += 1;
     return costs;
   }
   double cost_to_write_data(int data) override { return data; }

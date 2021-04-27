@@ -145,7 +145,7 @@ public:
       striping_process_coordinator->gc_extent(ext, objs);
       exts_per_locality[ext->locality] += 1;
       obs_data_per_locality[ext->locality] += ext->obsolete_space;
-      if (local_parities.find(ext->locality) != local_parities.end()) {
+      if (local_parities.find(ext->locality) == local_parities.end()) {
         local_parities.insert(ext->locality);
       }
       ret.num_exts_replaced += 1;
@@ -221,9 +221,14 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
-      stripe_set.erase(d);
-    }
+      for (Stripe *s : deleted) {
+        // if(s)
+        // {
+        //   delete s;
+        //   s = nullptr;
+        // }
+        stripe_set.erase(s);
+      }
     return ret;
   }
 };
@@ -277,6 +282,7 @@ public:
       if (filter_ext(ext)) {
         assert(ext->get_obsolete_percentage() <= 100);
         ret.temp_space += ext->obsolete_space;
+        ext_size = ext->ext_size;
         double valid_objs = ext->ext_size - ext->obsolete_space;
         if (ext_types_to_cost.find(ext->type) != ext_types_to_cost.end()) {
           ext_types_to_cost[ext->type] += valid_objs * 2;
@@ -368,9 +374,15 @@ public:
         ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
       }
     }
-    for (Stripe *d : deleted) {
-      stripe_set.erase(d);
+    for (Stripe *s : deleted) {
+      // if(s)
+      // {
+      //   delete s;
+      //   s = nullptr;
+      // }
+      stripe_set.erase(s);
     }
+
     return ret;
   };
 
@@ -445,7 +457,7 @@ public:
       return ret;
     }
 
-    gc_handler_ret gc_handler(set<Stripe *> &stripe_set) override {
+    gc_handler_ret gc_handler(set<Stripe *>& stripe_set) override {
       struct gc_handler_ret ret;
       set<Stripe *> deleted;
       vector<Stripe *> stripe_lst = sorted_stripe_set(stripe_set);
@@ -483,8 +495,13 @@ public:
           ret.total_num_exts_replaced += stripe_gc_res.num_exts_replaced;
         }
       }
-      for (Stripe *d : deleted) {
-        stripe_set.erase(d);
+      for (Stripe *s : deleted) {
+        // if(s)
+        // {
+        //   delete s;
+        //   s = nullptr;
+        // }
+        stripe_set.erase(s);
       }
       // std::cout << "reclaimed_space" <<ret.reclaimed_space << std::endl;
       // std::cout << "total_num_exts_replaced" <<ret.total_num_exts_replaced << std::endl;
