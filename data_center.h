@@ -68,8 +68,8 @@ struct eh_result {
   int total_storage_node_to_parity_calculator = 0;
   double max_obs_perc = 0;
   int total_exts_gced = 0;
-  int new_obj_writes = 0;
-  int new_obj_reads = 0;
+  double new_obj_writes = 0;
+  double new_obj_reads = 0;
   double striper_parities = 0;
   unordered_map<string, int> total_reclaimed_space_by_ext_type =
       unordered_map<string, int>();
@@ -89,8 +89,8 @@ struct sim_metric {
   double parity_writes = 0;
   double total_user_data_reads = 0;
   double total_user_data_writes = 0;
-  double total_gc_bandwidth = 0;
-  double total_bandwidth = 0;
+  long double total_gc_bandwidth = 0;
+  long double total_bandwidth = 0;
   int total_absent_data_reads = 0;
   int total_obsolete_data_reads = 0;
   int total_pool_to_parity_calculator = 0;
@@ -181,6 +181,7 @@ public:
       }
     }
     this->obj_mngr->remove_object(obj);
+    obj = nullptr;
     return ret;
   }
 
@@ -379,14 +380,17 @@ public:
     // global parity) / just data extents
     float coding_overhead = this->stripe_mngr->coding_overhead;
     ret.total_user_data_writes = ret.total_user_data_reads * coding_overhead;
-    double total_user_bandwidth =
+    long double total_user_bandwidth =
         ret.total_user_data_reads + ret.total_user_data_writes;
-    ret.total_bandwidth =
-        eh.total_absent_data_reads + eh.total_global_parity_reads +
-        eh.total_global_parity_writes + eh.total_local_parity_reads +
-        eh.total_local_parity_writes + eh.total_obsolete_data_reads +
-        eh.total_storage_node_to_parity_calculator + eh.new_obj_reads +
-        eh.new_obj_writes;
+    ret.total_bandwidth = eh.total_absent_data_reads;
+    ret.total_bandwidth += eh.total_global_parity_reads;
+    ret.total_bandwidth += eh.total_global_parity_writes;
+    ret.total_bandwidth += eh.total_local_parity_reads;
+    ret.total_bandwidth += eh.total_local_parity_writes;
+    ret.total_bandwidth += eh.total_obsolete_data_reads;
+    ret.total_bandwidth += eh.total_storage_node_to_parity_calculator;
+    ret.total_bandwidth += eh.new_obj_reads;
+    ret.total_bandwidth += eh.new_obj_writes;
 
     ret.parity_reads =
         eh.total_global_parity_reads + eh.total_local_parity_reads;
@@ -408,7 +412,7 @@ public:
     printf("Total reclaimed space %.0f\n", ret.total_reclaimed_space);
     printf("Total deleted %.0f\n", this->gced_space);
     printf("Total data size of dc %.0f\n", stripe_mngr->get_data_dc_size());
-    printf("GC bandwidth %.0f\n", ret.total_gc_bandwidth);
+    printf("GC bandwidth %.8Le\n", ret.total_gc_bandwidth);
     ret.gced_by_type = this->gc_strategy->get_gc_ed_exts_by_type();
 
     ret.types = this->coordinator->get_extent_types();

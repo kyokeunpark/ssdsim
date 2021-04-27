@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #pragma once
 
 #include "extent_manager.h"
@@ -343,8 +344,7 @@ public:
   using SimpleObjectPacker::SimpleObjectPacker;
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
-                    std::set<obj_ptr>& objs,
-                    float key = 0) override {
+                    std::set<obj_ptr>& objs, float key = 0) override {
     std::vector<obj_ptr> objs_lst = {};
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
@@ -369,8 +369,8 @@ class RandomizedGCObjectPacker : public SimpleGCObjectPacker {
 public:
   using SimpleGCObjectPacker::SimpleGCObjectPacker;
 
-  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
-                    float key = 0) override {
+  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
+                    std::set<obj_ptr>& objs, float key = 0) override {
     std::vector<obj_ptr> objs_lst = {};
     for (auto &it : *obj_pool) {
       float rem_size = it.second;
@@ -378,8 +378,7 @@ public:
         objs_lst.emplace_back(it.first);
     }
     obj_pool->clear();
-    std::shuffle(objs_lst.begin(), objs_lst.end(),
-                 generator);
+    std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
     for (auto &it : objs_lst)
       this->add_obj_to_current_ext_at_key(extent_stack, it, 4, key);
   }
@@ -418,13 +417,13 @@ public:
     }
 
     if (new_objs_added) {
-      object_lst obj_lst = {};
+      object_lst* obj_lst =new object_lst();
       for (auto &record : *obj_pool) {
         float rem_size = record.second;
         for (int i = 0; i < rem_size / 4 + round((fmod(rem_size, 4)) / 4.0); i++)
-          obj_lst.emplace_back(std::make_pair(record.first, 4));
+          obj_lst->emplace_back(std::make_pair(record.first, 4));
         obj_pool->clear(); // TODO: Might not be necessary?
-        *this->obj_pool = obj_lst;
+        this->obj_pool.reset(obj_lst);
         std::shuffle(obj_pool->begin(), obj_pool->end(),
                      generator);
       }
@@ -462,14 +461,14 @@ public:
     }
 
     // Mix valid and fresh objects
-    object_lst obj_lst = {};
+    object_lst * obj_lst = new object_lst();
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4.0 + round(fmod(rem_size, 4) / 4.0); i++)
-        obj_lst.emplace_back(std::make_pair(record.first, 4));
+        obj_lst->emplace_back(std::make_pair(record.first, 4));
     }
     obj_pool->clear();
-    *this->obj_pool = obj_lst;
+    this->obj_pool.reset(obj_lst);
     std::shuffle(obj_pool->begin(), obj_pool->end(),
                  generator);
 
@@ -1717,7 +1716,7 @@ public:
 
       shuffle(chunks.begin(), chunks.end(), generator);
       for (auto obj : chunks) {
-        add_obj_to_current_ext_at_key(extent_stack, obj, 4, 0);
+        add_obj_to_current_ext_at_key(extent_stack, obj, 4, key);
       }
     }
   }

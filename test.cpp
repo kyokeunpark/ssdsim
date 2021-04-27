@@ -77,7 +77,7 @@ TEST(ObjectManagerTest, DeleteObject) {
  * StripeManager
  ****************************************/
 TEST(StripeManagerTest, StripeManagerInit) {
-  StripeManager s_m = StripeManager(7, 2, 2, 2);
+  StripeManager s_m = StripeManager(7, 2, 2, 2, 0);
   EXPECT_EQ(s_m.num_data_exts_per_locality, 7);
   EXPECT_EQ(s_m.num_local_parities, 2);
   EXPECT_EQ(s_m.num_global_parities, 2);

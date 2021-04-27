@@ -33,23 +33,22 @@ public:
   int generation;
   time_t creation_time;
   int num_times_gced;
-  list<float> shards;
   list<ext_ptr> extents;
 
   ExtentObject(int id, float s, float l)
       : id(id), size(s), life(l), generation(0), num_times_gced(0),
-        creation_time(time(nullptr)), shards(list<float>()),
-        extents(list<ext_ptr>()) {}
+        creation_time(time(nullptr)), extents(list<ext_ptr>()) {}
+
+  ~ExtentObject() {
+    extents.clear();
+  }
 
   float get_timestamp() { return creation_time; }
 
   bool operator<(const ExtentObject &other) { return this->id < other.id; }
 
   float get_size() {
-    float sum = 0;
-    for (auto shard : this->shards)
-      sum += shard;
-    return sum;
+    return this->size;
   }
 
   double get_age() { return difftime(time(nullptr), creation_time); }
@@ -128,14 +127,14 @@ public:
       this->generation = obj->generation;
 
     if (this->objects.find(obj) != this->objects.end()) {
-      obj->shards.push_back(temp_size);
       this->objects[obj].emplace_back(temp_size);
+      obj->size += temp_size;
     } else {
-      obj->shards.push_back(temp_size);
       obj->add_extent(shared_from_this());
       auto shard_lst = list<float>();
       shard_lst.push_back(temp_size);
       this->objects.emplace(std::make_pair(obj, shard_lst));
+      obj->size += temp_size;
     }
     free_space -= temp_size;
     return temp_size;
@@ -206,6 +205,11 @@ public:
     for (int i = 0; i < num_data_blocks * num_localities; ++i) {
       this->stripe_size += ext_size;
     }
+  }
+
+  ~Stripe() {
+    if (localities)
+      delete localities;
   }
 
   //????the python code doesnt seem right, need to ask///

@@ -32,7 +32,7 @@ public:
         num_local_parities + num_global_parities;
     num_data_exts_per_stripe =
         num_data_extents * num_localities_in_stripe;
-    if (coding_overhead == -1) {
+    if (coding_overhead == 0) {
       this->coding_overhead = (num_global_parities + num_local_parities +
                                num_data_exts_per_stripe) /
                               num_data_exts_per_stripe;
