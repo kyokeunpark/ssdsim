@@ -363,8 +363,9 @@ public:
     auto largest_kv = extent_stack.begin();
     stack_val longest_lst = *(largest_kv->second.begin());
     largest_kv->second.erase(largest_kv->second.begin());
+    int loop_times = longest_lst.size() > num_left_to_add?num_left_to_add:longest_lst.size();
     for (int i = 0;
-         i < (num_left_to_add > largest_key ? largest_key : num_left_to_add);
+         i < loop_times;
          i++) {
       ret.push_back(longest_lst.front());
       longest_lst.erase(longest_lst.begin());
