@@ -332,19 +332,45 @@ public:
     return length;
   }
 
+  /*def fill_gap(self, num_left_to_add):
+        exts = []
+        keys = list(self.extent_stack.keys())
+        keys.sort()
+        while num_left_to_add > 0:
+            ind = bisect_right(keys, num_left_to_add)
+            ind -= 1
+            ind = self.adjust_index(ind, len(keys))
+            key = keys[ind]
+            num_left_to_add -= len(self.extent_stack[key][0])
+            exts += self.extent_stack[key].pop(0)
+            if (len(self.extent_stack[key]) == 0):
+                del self.extent_stack[key]
+                keys.remove(key)
+        return exts*/
   /*error prone double check*/
   stack_val fill_gap(int num_left_to_add) {
     stack_val ret;
     int temp = num_left_to_add;
     while (temp > 0) {
-      auto it = extent_stack.lower_bound(temp);
+      // TODO: Need to make sure that the upper_bound and lower_bound
+      // 		 calls returns same indices as Python's bisect_left
+      // and
+      //		 bisect_right function call
+      auto it = extent_stack.upper_bound(temp);
       
-      for(auto e: *(it->second.begin()))
-      {
-        ret.push_back(e);
-      }
+      it = it == extent_stack.begin()? extent_stack.begin():prev(it);
       temp -= it->second.begin()->size();
-      it->second.erase(it->second.begin());
+      stack_val it_second_back;
+      if(it->second.size() != 0)
+      {
+        while(!it->second.back().empty())
+        {
+          ret.push_back(it->second.back().back());
+          it->second.back().pop_back();
+        }
+        it->second.pop_back();
+      }
+      
       if (it->second.empty())
         extent_stack.erase(it);
     }
