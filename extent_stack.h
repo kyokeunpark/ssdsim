@@ -235,8 +235,8 @@ public:
     }
     auto prev_pos = next_pos == extent_stack.begin() ? extent_stack.begin()
                                                      : prev(next_pos);
-    int next_key = next_pos->first;
-    int prev_key = prev_pos->first;
+    float next_key = next_pos->first;
+    float prev_key = prev_pos->first;
     if (next_key - key < key - prev_key) {
       return get_extent_at_key(next_key);
     }
