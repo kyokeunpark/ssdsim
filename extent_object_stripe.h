@@ -100,10 +100,6 @@ public:
         locality(0), generation(0), timestamp(configtime), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
-  ~Extent() {
-    this->delete_ext();
-  }
-
   double get_age() { return difftime(time(nullptr), timestamp); }
 
   float get_obj_size(obj_ptr obj) {

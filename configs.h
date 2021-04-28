@@ -826,10 +826,9 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
   shared_ptr<AbstractStriperDecorator> striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
 
+  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
   current_exts->emplace(0, ext_mngr->create_extent());
   auto temp_op = make_shared<object_lst>();
 
@@ -957,14 +956,6 @@ inline DataCenter randomized_objs_no_exts_config(
   static auto temp_op_gc = make_shared<object_lst>();
   static auto temp_curr_exts = make_shared<current_extents>();
   static auto temp_curr_exts_gc = make_shared<current_extents>();
-  // shared_ptr<SimpleObjectPacker> obj_packer =
-  //     make_shared<SimpleObjectPacker>(obj_mngr, ext_mngr, temp_op,
-  //                                         temp_curr_exts, num_objs,
-  //                                         primary_threshold);
-  // shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
-  //     make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, temp_op_gc,
-  //                                           temp_curr_exts_gc, num_objs,
-  //                                           primary_threshold);
   shared_ptr<SimpleObjectPacker> obj_packer =
       make_shared<RandomizedObjectPacker>(obj_mngr, ext_mngr, temp_op,
                                           temp_curr_exts, num_objs,
