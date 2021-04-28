@@ -9,21 +9,21 @@
 using std::max;
 using std::min;
 using std::shared_ptr;
-typedef vector<Extent *> *extent_stack_ext_lst;
+typedef vector<ext_ptr > *extent_stack_ext_lst;
 /*
  * Struct used to check if a pointer to an extent exists within a
  * list of extents. It is kind of a hack, but works well, given the current
  * structure of the ExtentStack class.
  */
 struct isExtent {
-  Extent *extent;
+  ext_ptr extent;
 
-  isExtent(Extent *e) : extent(e) {}
+  isExtent(ext_ptr e) : extent(e) {}
 
-  bool operator()(const Extent *e) const { return this->extent == e; }
+  bool operator()(const ext_ptr e) const { return this->extent == e; }
 };
 
-using stack_val = std::vector<Extent *>;
+using stack_val = std::vector<ext_ptr >;
 using ext_stack = std::map<float, stack_val>;
 using ext_stack_desc = std::map<float, stack_val, std::greater<int>>;
 
@@ -42,14 +42,14 @@ public:
   virtual ~AbstractExtentStack() {}
 
   virtual int num_stripes(int stripe_size) = 0;
-  virtual list<Extent *> pop_stripe_num_exts(int stripe_size) = 0;
-  virtual void add_extent(float key, Extent *ext){};
+  virtual list<ext_ptr > pop_stripe_num_exts(int stripe_size) = 0;
+  virtual void add_extent(float key, ext_ptr ext){};
   virtual int get_length_of_extent_stack() = 0;
   virtual int get_length_at_key(float key) = 0;
-  virtual Extent *get_extent_at_key(float key) = 0;
-  virtual bool contains_extent(Extent *extent) = 0;
-  virtual void remove_extent(Extent *extent) = 0;
-  virtual Extent *get_extent_at_closest_key(float key) { std::cerr<<"should never be called virtual get_ext_at_closet_key"; return nullptr; };
+  virtual ext_ptr get_extent_at_key(float key) = 0;
+  virtual bool contains_extent(ext_ptr extent) = 0;
+  virtual void remove_extent(ext_ptr extent) = 0;
+  virtual ext_ptr get_extent_at_closest_key(float key) { std::cerr<<"should never be called virtual get_ext_at_closet_key"; return nullptr; };
   virtual void add_extent(stack_val &ext_lst) {
     std::cerr << "extent stack virtual add extent!";
   }
@@ -67,9 +67,9 @@ public:
 
   virtual int num_stripes(int stripe_size) override = 0;
 
-  virtual list<Extent *> pop_stripe_num_exts(int stripe_size) override = 0;
+  virtual list<ext_ptr > pop_stripe_num_exts(int stripe_size) override = 0;
 
-  void add_extent(float key, Extent *ext) override {
+  void add_extent(float key, ext_ptr ext) override {
     if (this->extent_stack.find(key) == this->extent_stack.end())
       this->extent_stack.emplace(key, stack_val());
     this->extent_stack[key].push_back(ext);
@@ -97,11 +97,11 @@ public:
       del self.extent_stack[key]
   return ext
   */
-  virtual Extent *get_extent_at_key(float key) override {
+  virtual ext_ptr get_extent_at_key(float key) override {
     if (extent_stack.find(key) == extent_stack.end())
       return nullptr;
     stack_val * exts = &this->extent_stack[key];
-    Extent *ret = exts->front();
+    ext_ptr ret = exts->front();
     exts->erase(exts->begin());
     if (exts->size() == 0)
       extent_stack.erase(key);
@@ -109,7 +109,7 @@ public:
     return ret;
   }
 
-  virtual bool contains_extent(Extent *extent) override {
+  virtual bool contains_extent(ext_ptr extent) override {
     for (auto &kv : extent_stack) {
       if (find(kv.second.begin(), kv.second.end(), extent) != kv.second.end())
         return true;
@@ -118,7 +118,7 @@ public:
   }
 
   // can end early
-  virtual void remove_extent(Extent *extent) override {
+  virtual void remove_extent(ext_ptr extent) override {
     auto it =  extent_stack.begin();
     while (it != extent_stack.end()) {
       auto found = std::find(it->second.begin(), it->second.end(), extent);
@@ -147,8 +147,8 @@ public:
     return this->get_length_of_extent_stack() / stripe_size;
   }
 
-  list<Extent *> pop_stripe_num_exts(int stripe_size) override {
-    list<Extent *> ret;
+  list<ext_ptr > pop_stripe_num_exts(int stripe_size) override {
+    list<ext_ptr > ret;
     int num_left_to_add = stripe_size;
     // std::cout << "num_left_to_add pop_stripe_num_exts singleES" << stripe_size << std::endl;
     // std::cout << "get_length_of_extent_stack pop_stripe_num_exts singleES" << this->get_length_of_extent_stack() << std::endl;
@@ -194,11 +194,11 @@ class MultiExtentStack : public ExtentStack<ext_stack> {
     return num_stripes;
   }
 
-  list<Extent *> pop_stripe_num_exts (int stripe_size) override{
-    list<Extent *>ret;
+  list<ext_ptr > pop_stripe_num_exts (int stripe_size) override{
+    list<ext_ptr >ret;
     auto it = extent_stack.begin();
     while (it!= extent_stack.end()) {
-      vector<Extent *> *ext_lst = &it->second;
+      vector<ext_ptr > *ext_lst = &it->second;
       if (ext_lst->size() >= stripe_size) {
         for (int i = 0; i < stripe_size; i++) {
           ret.push_back(ext_lst->front());
@@ -219,7 +219,7 @@ class BestEffortExtentStack : public SingleExtentStack<ext_stack> {
 public:
   using SingleExtentStack<ext_stack> ::SingleExtentStack;
   // double check correctness
-  Extent *get_extent_at_closest_key(float key) override {
+  ext_ptr get_extent_at_closest_key(float key) override {
     if (extent_stack.size() == 1) {
       return get_extent_at_key(extent_stack.begin()->first);
     }
@@ -251,20 +251,20 @@ public:
   int num_stripes(int stripe_size) override {
     return extent_stack->num_stripes(stripe_size);
   }
-  void add_extent(float e, Extent *s) override { extent_stack->add_extent(e, s); }
+  void add_extent(float e, ext_ptr s) override { extent_stack->add_extent(e, s); }
   int get_length_at_key(float k) override {
     return extent_stack->get_length_at_key(k);
   }
   int get_length_of_extent_stack() override {
     return extent_stack->get_length_of_extent_stack();
   }
-  bool contains_extent(Extent *extent) override {
+  bool contains_extent(ext_ptr extent) override {
     return extent_stack->contains_extent(extent);
   }
-  void remove_extent(Extent *extent) override {
+  void remove_extent(ext_ptr extent) override {
     extent_stack->remove_extent(extent);
   }
-  list<Extent *> pop_stripe_num_exts(int stripe_size) override {
+  list<ext_ptr > pop_stripe_num_exts(int stripe_size) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
 
@@ -273,7 +273,7 @@ public:
     }
     return extent_stack->pop_stripe_num_exts(stripe_size);
   }
-  Extent *get_extent_at_closest_key(float key) override {
+  ext_ptr get_extent_at_closest_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
       std::shuffle(it->second.begin(), it->second.end(), generator);
@@ -281,7 +281,7 @@ public:
     }
     return extent_stack->get_extent_at_closest_key(key);
   }
-  Extent *get_extent_at_key(float key) override {
+  ext_ptr get_extent_at_key(float key) override {
     auto it = extent_stack->get_extent_stack()->begin();
     while (it != extent_stack->get_extent_stack()->end() ) {
       std::shuffle(it->second.begin(), it->second.end(), generator);
@@ -352,8 +352,8 @@ public:
   }
 
   /*error prone double check*/
-  list<Extent *> pop_stripe_num_exts(int stripe_size) override {
-    list<Extent *> ret;
+  list<ext_ptr > pop_stripe_num_exts(int stripe_size) override {
+    list<ext_ptr > ret;
     int num_left_to_add = stripe_size;
 
     if (get_length_of_extent_stack() < num_left_to_add)
@@ -378,7 +378,7 @@ public:
       add_extent(longest_lst);
     if (num_left_to_add > 0)
     { 
-      for (Extent *e : fill_gap(num_left_to_add))
+      for (ext_ptr e : fill_gap(num_left_to_add))
         ret.push_back(e);
     }
     return ret;
@@ -404,7 +404,7 @@ public:
            del self.extent_stack[key]
        return ext
   */
-  Extent *get_extent_at_key(float k) override {
+  ext_ptr get_extent_at_key(float k) override {
       auto smallest = std::prev(extent_stack.end());
       auto ext = smallest->second.front().front();
       smallest->second.erase(smallest->second.begin());
@@ -413,7 +413,7 @@ public:
       return ext;
   }
 
-  bool contains_extent(Extent *extent) override {
+  bool contains_extent(ext_ptr extent) override {
     for (auto &kv : extent_stack) {
       for (auto &l : kv.second) {
         if (find(l.begin(), l.end(), extent) != l.end())
@@ -423,7 +423,7 @@ public:
     return false;
   }
 
-  void remove_extent(Extent *extent) override {
+  void remove_extent(ext_ptr extent) override {
     auto it = extent_stack.begin();
     while(it != extent_stack.end())
     {

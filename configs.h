@@ -826,10 +826,9 @@ inline DataCenter randomized_ext_placement_joined_pools_config(
   shared_ptr<AbstractStriperDecorator> striper =
       make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
           make_shared<SimpleStriper>(stripe_mngr, ext_mngr)));
-
   shared_ptr<AbstractStriperDecorator> gc_striper = striper;
-  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
 
+  shared_ptr<current_extents> current_exts = make_shared<current_extents>();
   current_exts->emplace(0, ext_mngr->create_extent());
   auto temp_op = make_shared<object_lst>();
 

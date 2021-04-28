@@ -47,7 +47,7 @@ inline double sum_map_string_double(unordered_map<string, double>const &map )
 }
 struct del_result {
   double total_added_obsolete = 0;
-  set<Stripe *> gc_stripes_set = set<Stripe *>();
+  set<stripe_ptr> gc_stripes_set = set<stripe_ptr>();
   unordered_map<string, double> ext_types = unordered_map<string, double>();
 };
 
@@ -145,7 +145,7 @@ public:
    * the deletion of object with obj_id and a dict mapping extent types
    * to added obsoleted data.
    */
-  del_result del_object(ExtentObject *obj) {
+  del_result del_object(obj_ptr obj) {
     del_result ret;
     auto ext_lst = obj->extents;
     //  std::reverse(ext_lst.begin(), ext_lst.end());
@@ -181,7 +181,6 @@ public:
       }
     }
     this->obj_mngr->remove_object(obj);
-    delete obj;
     obj = nullptr;
     return ret;
   }
@@ -201,7 +200,7 @@ public:
     vector<double> obs_percentages = vector<double>();
     unordered_map<string, double> net_obs_by_ext_type =
         unordered_map<string, double>();
-    ExtentObject *next_del_obj = nullptr;
+    obj_ptr next_del_obj = nullptr;
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
       double added_obsolete_this_gc = 0;
@@ -212,7 +211,7 @@ public:
         added_obsolete_by_type[it.first] = 0;
 
       // Find all candidates for GC
-      set<Stripe *> * gc_stripes_set = new set<Stripe *>();
+      set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
       while (next_del_time <= configtime && !event_mngr->empty()) {
         del_result dr = this->del_object(next_del_obj);
         gc_stripes_set->insert(dr.gc_stripes_set.begin(),
