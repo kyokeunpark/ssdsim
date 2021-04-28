@@ -124,13 +124,11 @@ public:
 
     if (this->objects.find(obj) != this->objects.end()) {
       this->objects[obj].emplace_back(temp_size);
-      obj->size += temp_size;
     } else {
       obj->add_extent(shared_from_this());
       auto shard_lst = list<float>();
       shard_lst.push_back(temp_size);
       this->objects.emplace(std::make_pair(obj, shard_lst));
-      obj->size += temp_size;
     }
     free_space -= temp_size;
     return temp_size;
