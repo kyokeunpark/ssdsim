@@ -42,7 +42,7 @@ public:
   }
 
   double get_data_dc_size() {
-    int dc_size = 0;
+    long dc_size = 0;
     for (auto stripe : *stripes) {
       dc_size += stripe->ext_size * num_data_exts_per_stripe;
     }

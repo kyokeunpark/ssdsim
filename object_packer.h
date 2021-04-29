@@ -343,7 +343,7 @@ class RandomizedObjectPacker : public SimpleObjectPacker {
 public:
   using SimpleObjectPacker::SimpleObjectPacker;
 
-  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
+   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
                     std::set<obj_ptr>& objs, float key = 0) override {
     std::vector<obj_ptr> objs_lst = {};
     for (auto &record : *obj_pool) {
@@ -461,7 +461,7 @@ public:
     }
 
     // Mix valid and fresh objects
-    object_lst * obj_lst = new object_lst();
+object_lst * obj_lst = new object_lst();
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4.0 + round(fmod(rem_size, 4) / 4.0); i++)
@@ -1335,33 +1335,17 @@ public:
       {
         ind = obj_pool->size() - 1;
       }
-              auto r = (*obj_pool)[ind];
-        obj_pool->erase(obj_pool->begin() + ind);
-        float obj_rem_size = r.second;
-        if (obj_rem_size < current_ext->ext_size &&
+      auto r = (*obj_pool)[ind];
+      obj_pool->erase(obj_pool->begin() + ind);
+      float obj_rem_size = r.second;
+      if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          float obj_original_size = r.second;
-          obj_rem_size = (1 - threshold / 100.0) * current_ext->ext_size;
-          insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
-          add_obj_to_current_ext_at_key(extent_stack, r.first, obj_rem_size,
-                                        key, obj_ids_to_exts);
-          if (obj_pool->size() > 0) {
-            float free_space = current_ext->free_space;
-
-            int ind = get_larger_obj_index(current_ext->ext_size, free_space);
-            if(ind == -1)
-            {
-              ind = obj_pool->size() - 1;
-            }
-            r = (*obj_pool)[ind];
-            obj_pool->erase(obj_pool->begin() + ind);
-          } else {
-            break;
-          }
-        }
-
-        stack_val exts = add_obj_to_current_ext_at_key(
-            extent_stack, r.first, obj_rem_size, key, obj_ids_to_exts);
+        float obj_original_size = r.second;
+        obj_rem_size = (1 - threshold / 100.0) * current_ext->ext_size;
+        insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
+      }
+      stack_val exts = add_obj_to_current_ext_at_key(
+          extent_stack, r.first, obj_rem_size, key, obj_ids_to_exts);
     }
 
     for (auto mapping : obj_ids_to_exts)
@@ -1375,60 +1359,46 @@ public:
   /*same functions as non-gc one*/
   using SizeBasedObjectPackerLargerWholeObj::
       SizeBasedObjectPackerLargerWholeObj;
-    void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
+  void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
                     float key = 0) override {
-    auto abs_ext_stack = extent_stack;
+    
     stack_val exts = stack_val();
     ext_stack obj_ids_to_exts = ext_stack();
-    if (current_exts->find(key) != current_exts->end()) {
-      auto objs = (*current_exts)[key]->delete_ext();
-      add_objs(objs);
+
+    // If there are any object in the current extent, place them
+    // back in the pool.
+    if (this->current_exts->find(key) != this->current_exts->end()) {
+      auto objs = (*this->current_exts)[key]->delete_ext();
+      this->add_objs(objs);
     }
     std::sort(obj_pool->begin(), obj_pool->end(), obj_record_desc_rem_size_extent);
 
     while (obj_pool->size() > 0) {
-      if (current_exts->find(key) == current_exts->end())
-        (*current_exts)[key] = ext_manager->create_extent();
+      if (this->current_exts->find(key) == this->current_exts->end())
+        (*this->current_exts)[key] = this->ext_manager->create_extent();
 
-      auto current_ext = (*current_exts)[key];
+      auto current_ext = (*this->current_exts)[key];
       float free_space = current_ext->free_space;
       int ind = this->get_larger_obj_index(current_ext->ext_size, free_space);
       if(ind == -1)
       {
         ind = obj_pool->size() - 1;
       }
-
       auto r = (*obj_pool)[ind];
-        obj_pool->erase(obj_pool->begin() + ind);
-        float obj_rem_size = r.second;
-        if (obj_rem_size < current_ext->ext_size &&
+      obj_pool->erase(obj_pool->begin() + ind);
+      float obj_rem_size = r.second;
+      if (obj_rem_size < current_ext->ext_size &&
             obj_rem_size > (1 - threshold / 100.0) * current_ext->ext_size) {
-          float obj_original_size = r.second;
-          obj_rem_size = (1 - threshold / 100.0) * current_ext->ext_size;
-          insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
-          add_obj_to_current_ext_at_key(extent_stack, r.first, obj_rem_size,
-                                        key, obj_ids_to_exts);
-          if (obj_pool->size() > 0) {
-            float free_space = current_ext->free_space;
-
-            int ind = get_larger_obj_index(current_ext->ext_size, free_space);
-            if(ind == -1)
-            {
-              ind = obj_pool->size() - 1;
-            }
-            r = (*obj_pool)[ind];
-            obj_pool->erase(obj_pool->begin() + ind);
-          } else {
-            break;
-          }
-        }
-
-        stack_val exts = add_obj_to_current_ext_at_key(
-            extent_stack, r.first, obj_rem_size, key, obj_ids_to_exts);
+        float obj_original_size = r.second;
+        obj_rem_size = (1 - threshold / 100.0) * current_ext->ext_size;
+        insert_obj_back_into_pool(r.first, obj_original_size - obj_rem_size);
+      }
+      stack_val exts = add_obj_to_current_ext_at_key(
+          extent_stack, r.first, obj_rem_size, key, obj_ids_to_exts);
     }
 
     for (auto mapping : obj_ids_to_exts)
-      abs_ext_stack->add_extent(mapping.second);
+      extent_stack->add_extent(mapping.second);
   }
 
   void
@@ -1691,27 +1661,22 @@ public:
   using AgeBasedObjectPacker::AgeBasedObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
                     float key = 0) override {
-        list<obj_pq_record> objs_lst;
-    while (!obj_queue->empty()) {
+    float prev_key = 0;
+    while (obj_queue->size() > 0) {
+      prev_key = std::get<0>(std::get<obj_pq_record>(obj_queue->top()));
       obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
-      obj_queue->pop();
-      objs_lst.push_back(r);
-    }
-    while (objs_lst.size() > 0) {
-      int prev_key = std::get<0>(objs_lst.front());
-      obj_pq_record r = objs_lst.front();
       vector<obj_ptr> chunks;
-      while (std::get<0>(r) == prev_key && objs_lst.size() > 0) {
-        r = objs_lst.front();
-        objs_lst.pop_front();
+      while (std::get<0>(r) == prev_key && obj_queue->size() > 0) {
+        r = std::get<obj_pq_record>(obj_queue->top());
+        obj_queue->pop();
         for (int j = 0; j < std::get<2>(r) / 4; ++j) {
           chunks.push_back(std::get<1>(r));
         }
-        if (objs_lst.size() == 0) {
+        if (obj_queue->size() == 0) {
           break;
         }
 
-        r = objs_lst.front();
+        r = std::get<obj_pq_record>(obj_queue->top());
       }
 
       shuffle(chunks.begin(), chunks.end(), generator);
@@ -1727,27 +1692,22 @@ public:
   using AgeBasedGCObjectPacker::AgeBasedGCObjectPacker;
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
                     float key = 0) override {
-    list<obj_pq_record> objs_lst;
-    while (!obj_queue->empty()) {
+    float prev_key = 0;
+    while (obj_queue->size() > 0) {
+      prev_key = std::get<0>(std::get<obj_pq_record>(obj_queue->top()));
       obj_pq_record r = std::get<obj_pq_record>(obj_queue->top());
-      obj_queue->pop();
-      objs_lst.push_back(r);
-    }
-    while (objs_lst.size() > 0) {
-      int prev_key = std::get<0>(objs_lst.front());
-      obj_pq_record r = objs_lst.front();
       vector<obj_ptr> chunks;
-      while (std::get<0>(r) == prev_key && objs_lst.size() > 0) {
-        r = objs_lst.front();
-        objs_lst.pop_front();
+      while (std::get<0>(r) == prev_key && obj_queue->size() > 0) {
+        r = std::get<obj_pq_record>(obj_queue->top());
+        obj_queue->pop();
         for (int j = 0; j < std::get<2>(r) / 4; ++j) {
           chunks.push_back(std::get<1>(r));
         }
-        if (objs_lst.size() == 0) {
+        if (obj_queue->size() == 0) {
           break;
         }
 
-        r = objs_lst.front();
+        r = std::get<obj_pq_record>(obj_queue->top());
       }
 
       shuffle(chunks.begin(), chunks.end(), generator);
@@ -1755,7 +1715,7 @@ public:
         add_obj_to_current_ext_at_key(extent_stack, obj, 4, 0);
       }
     }
-  };
+  }
 };
 class GenerationBasedObjectPacker : public KeyBasedObjectPacker {
 public:
