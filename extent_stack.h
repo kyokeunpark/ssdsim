@@ -226,12 +226,14 @@ public:
     if (key < extent_stack.begin()->first) {
       return get_extent_at_key(extent_stack.begin()->first);
     }
-    if (key > prev(extent_stack.end())->first) {
-      return get_extent_at_key(prev(extent_stack.end())->first);
+    auto last = prev(extent_stack.end());
+    if (key > last->first) {
+      return get_extent_at_key(last->first);
     }
+    
     auto next_pos = extent_stack.lower_bound(key);
     if (next_pos == extent_stack.end()) {
-      next_pos = prev(extent_stack.end());
+      next_pos = last;
     }
     auto prev_pos = next_pos == extent_stack.begin() ? extent_stack.begin()
                                                      : prev(next_pos);
