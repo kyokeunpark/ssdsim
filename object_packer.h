@@ -166,7 +166,7 @@ public:
     // Find the largest object stored in the extent
     float largest_obj = -1, local_max = 0;
     for (auto &tuple : extent->objects) {
-      std::list<float> sizes = tuple.second;
+      std::vector<float> sizes = tuple.second;
       local_max = std::accumulate(sizes.begin(), sizes.end(), 0);
       if (largest_obj < local_max) {
         largest_obj = local_max;
@@ -345,13 +345,14 @@ public:
 
    void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
                     std::set<obj_ptr>& objs, float key = 0) override {
-    std::vector<obj_ptr> objs_lst = {};
+    vector<obj_ptr> objs_lst = {};
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4; i++)
         objs_lst.emplace_back(record.first);
     }
-    obj_pool->clear();
+    object_lst empty_lst;
+    obj_pool->swap(empty_lst);
 
     std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
     for (auto &record : objs_lst)
@@ -377,7 +378,8 @@ public:
       for (int i = 0; i < rem_size / 4; i++)
         objs_lst.emplace_back(it.first);
     }
-    obj_pool->clear();
+    object_lst empty_lst;
+    obj_pool->swap(empty_lst);
     std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
     for (auto &it : objs_lst)
       this->add_obj_to_current_ext_at_key(extent_stack, it, 4, key);

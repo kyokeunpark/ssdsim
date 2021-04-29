@@ -1,6 +1,5 @@
 #pragma once
 #include "config.h"
-#include "extent_object_shard.h"
 #include <memory>
 #include <ctime>
 #include <iostream>
@@ -17,7 +16,6 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 using std::make_shared;
-using shard_ptr = std::shared_ptr<Extent_Object_Shard>;
 using obj_ptr = std::shared_ptr<ExtentObject>;
 using ext_ptr = std::shared_ptr<Extent>;
 using stripe_ptr = std::shared_ptr<Stripe>;
@@ -76,7 +74,7 @@ public:
   double ext_size;
 
   //unordered_map<obj_ptr, list<shard_ptr>> objects;
-  unordered_map<obj_ptr, list<float>> objects;
+  unordered_map<obj_ptr, vector<float>> objects;
   stripe_ptr stripe;
   int locality;
   int generation;
@@ -96,7 +94,7 @@ public:
 
   Extent(double e_s, int s_t, int i)
       : obsolete_space(0), free_space(e_s), ext_size(e_s), id(i),
-        objects(unordered_map<obj_ptr, list<float>>()),
+        objects(unordered_map<obj_ptr, vector<float>>()),
         locality(0), generation(0), timestamp(configtime), type("0"),
         secondary_threshold(s_t), stripe(nullptr) {}
 
@@ -126,7 +124,7 @@ public:
       this->objects[obj].emplace_back(temp_size);
     } else {
       obj->add_extent(shared_from_this());
-      auto shard_lst = list<float>();
+      auto shard_lst = vector<float>();
       shard_lst.push_back(temp_size);
       this->objects.emplace(std::make_pair(obj, shard_lst));
     }
@@ -135,8 +133,9 @@ public:
   }
 
   void remove_objects() {
-    for (auto obj : this->objects)
+    for (auto obj : this->objects) {
       obj.first->remove_extent(shared_from_this());
+    }
     this->objects.clear();
   }
 
@@ -144,6 +143,7 @@ public:
     auto it = this->objects.find(obj);
     if (it != this->objects.end()) {
       this->obsolete_space += std::accumulate(it->second.begin(), it->second.end(), 0);
+      this->objects[obj].clear();
       this->objects.erase(obj);
     }
     return obsolete_space / ext_size * 100;
@@ -180,7 +180,7 @@ public:
   int num_data_blocks;
   int num_localities;
   double free_space;
-  vector<int> *localities;
+  vector<int> localities;
   int ext_size;
   double timestamp;
   int stripe_size;
@@ -192,18 +192,13 @@ public:
       : id(id), obsolete(0), num_data_blocks(num_data_extents_per_locality),
         num_localities(num_localities),
         free_space(num_localities * num_data_extents_per_locality),
-        localities(new vector<int>(num_localities, 0)), ext_size(ext_size),
+        localities(vector<int>(num_localities, 0)), ext_size(ext_size),
         timestamp(0), primary_threshold(primary_threshold),
         extents(list<ext_ptr>()) {
     this->stripe_size = 0;
     for (int i = 0; i < num_data_blocks * num_localities; ++i) {
       this->stripe_size += ext_size;
     }
-  }
-
-  ~Stripe() {
-    if (localities)
-      delete localities;
   }
 
   //????the python code doesnt seem right, need to ask///
@@ -231,10 +226,10 @@ public:
       ext->stripe = shared_from_this();
       free_space -= 1;
       int locality = 0;
-      while ((*localities)[locality] == num_data_blocks) {
+      while (localities[locality] == num_data_blocks) {
         locality += 1;
       }
-      (*localities)[locality] += 1;
+      localities[locality] += 1;
       ext->locality = locality;
       if (ext->timestamp > timestamp) {
         this->timestamp = ext->timestamp;
@@ -247,7 +242,7 @@ public:
   void del_extent(ext_ptr ext) {
     ext->stripe = nullptr;
     ext->remove_objects();
-    (*localities)[ext->locality] -= 1;
+    localities[ext->locality] -= 1;
     obsolete -= ext->obsolete_space;
     extents.remove(ext);
     free_space += 1;
