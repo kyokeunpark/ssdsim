@@ -1,10 +1,10 @@
 #ifndef __DATA_CENTER_H_
 #define __DATA_CENTER_H_
 
+#pragma once
 #include <cstdio>
 #include <ios>
 #include <numeric>
-#pragma once
 #include <iomanip>
 #include "config.h"
 #include "event_manager.h"
@@ -18,10 +18,14 @@
 #include <iostream>
 #include <set>
 #include <unordered_map>
+#include <thread>
+#include <mutex>
 
 using std::cout, std::cerr, std::endl;
 using std::set;
 using std::unordered_map;
+using std::mutex;
+using std::shared_ptr;
 inline std::ostream &operator<<(std::ostream &os,  unordered_map<string, double> &dict) {
   os<< "{";
   int count = 0;
@@ -113,6 +117,10 @@ class DataCenter {
   double gced_space;
   float simul_time;
   float striping_cycle, gc_cycle;
+  // For paralleled r/w
+  const int nthreads;
+  std::vector<std::thread> threads;
+  shared_ptr<mutex> mtx, metric_mtx;
 
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
@@ -123,22 +131,15 @@ class DataCenter {
   shared_ptr<StripingProcessCoordinator> coordinator;
   unordered_map<string, long double> obs_by_ext_types;
 
-public:
-  DataCenter(unsigned long max_size, float striping_cycle,
-             shared_ptr<AbstractStriperDecorator> striper,
-             shared_ptr<StripeManager> stripe_mngr,
-             shared_ptr<ExtentManager> ext_mngr,
-             shared_ptr<ObjectManager> obj_mngr,
-             shared_ptr<EventManager> event_mngr,
-             shared_ptr<GarbageCollectionStrategy> gc_strategy,
-             shared_ptr<StripingProcessCoordinator> coordinator, float simul_time,
-             float gc_cycle)
-      : max_size(max_size), striping_cycle(striping_cycle), striper(striper),
-        ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
-        gc_strategy(gc_strategy), coordinator(coordinator),
-        simul_time(simul_time), gc_cycle(gc_cycle), gced_space(0),
-        obs_by_ext_types(unordered_map<string, long double>()),
-        stripe_mngr(stripe_mngr) {}
+  inline void lock(shared_ptr<mutex> mtx) {
+    if (this->nthreads != 1)
+      mtx->lock();
+  }
+
+  inline void unlock(shared_ptr<mutex> mtx) {
+    if (this->nthreads != 1)
+      mtx->unlock();
+  }
 
   /*
    * Returns the amount of added obsolete data, a set of stripes affected by
@@ -185,6 +186,122 @@ public:
     return ret;
   }
 
+  double run_gc(eh_result & res, float & next_del_time,
+              obj_ptr & next_del_obj, double & net_obsolete,
+              unordered_map<string, double> & net_obs_by_ext_type) {
+    double added_obsolete_this_gc = 0;
+    unordered_map<string, double> added_obsolete_by_type =
+        unordered_map<string, double>();
+    for (auto it : this->obs_by_ext_types)
+      added_obsolete_by_type[it.first] = 0;
+    // Find all candidates for GC
+    set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
+    while (next_del_time <= configtime && !event_mngr->empty()) {
+      del_result dr = this->del_object(next_del_obj);
+      gc_stripes_set->insert(dr.gc_stripes_set.begin(),
+                            dr.gc_stripes_set.end());
+      added_obsolete_this_gc += dr.total_added_obsolete;
+
+      // Since garbage collection has to wait for gc cycle need to
+      // add how long the data sits around before the garbage
+      // collection kicks in to the obsolete data metric.
+      lock(metric_mtx);
+      res.total_obsolete +=
+          dr.total_added_obsolete * (configtime - next_del_time);
+      for (auto it : dr.ext_types) {
+        if (added_obsolete_by_type.find(it.first) ==
+            added_obsolete_by_type.end()) {
+          added_obsolete_by_type[it.first] = it.second;
+          this->obs_by_ext_types[it.first] =
+              it.second * (configtime - next_del_time);
+        } else {
+          added_obsolete_by_type[it.first] += it.second;
+          this->obs_by_ext_types[it.first] +=
+              it.second * (configtime - next_del_time);
+        }
+      }
+      unlock(metric_mtx);
+
+      lock(mtx);
+      if (!this->event_mngr->empty()) {
+        auto e = this->event_mngr->events->top();
+        this->event_mngr->events->pop();
+        next_del_time = std::get<0>(e);
+        next_del_obj = std::get<1>(e);
+      }
+      unlock(mtx);
+    }
+
+    lock(mtx);
+    this->event_mngr->put_event(next_del_time, next_del_obj);
+    auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
+    delete gc_stripes_set;
+    if (!this->event_mngr->empty()) {
+      auto e = this->event_mngr->events->top();
+      this->event_mngr->events->pop();
+      next_del_time = std::get<0>(e);
+      next_del_obj = std::get<1>(e);
+    }
+    unlock(mtx);
+
+    lock(metric_mtx);
+    res.total_reclaimed_space += gc_ret.reclaimed_space;
+    res.total_exts_gced += gc_ret.total_num_exts_replaced;
+    res.new_obj_reads += gc_ret.total_user_reads;
+    res.new_obj_writes += gc_ret.total_user_writes;
+
+    res.total_valid_obj_transfers += gc_ret.total_valid_obj_transfers;
+    res.total_storage_node_to_parity_calculator +=
+        gc_ret.total_storage_node_to_parity_calculator;
+
+    res.total_global_parity_reads += gc_ret.total_global_parity_reads;
+    res.total_global_parity_writes += gc_ret.total_global_parity_writes;
+    res.total_local_parity_reads += gc_ret.total_local_parity_reads;
+    res.total_local_parity_writes += gc_ret.total_local_parity_writes;
+    res.total_obsolete_data_reads += gc_ret.total_obsolete_data_reads;
+    res.total_absent_data_reads += gc_ret.total_absent_data_reads;
+
+    net_obsolete += added_obsolete_this_gc - gc_ret.reclaimed_space;
+
+    for (auto it : gc_ret.total_reclaimed_space_by_ext_type) {
+      if (res.total_reclaimed_space_by_ext_type.find(it.first) ==
+          res.total_reclaimed_space_by_ext_type.end())
+        res.total_reclaimed_space_by_ext_type[it.first] = it.second;
+      else
+        res.total_reclaimed_space_by_ext_type[it.first] += it.second;
+    }
+    for (auto it : this->obs_by_ext_types) {
+      const string type = it.first;
+      auto net_obs_it = net_obs_by_ext_type.find(type);
+      auto total_rec_it = gc_ret.total_reclaimed_space_by_ext_type.find(type);
+
+      if (net_obs_it != net_obs_by_ext_type.end() &&
+          total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
+        net_obs_by_ext_type[type] +=
+            added_obsolete_by_type[type] -
+            gc_ret.total_reclaimed_space_by_ext_type[type];
+      else if (net_obs_it != net_obs_by_ext_type.end())
+        net_obs_by_ext_type[type] += added_obsolete_by_type[type];
+      else if (total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
+        net_obs_by_ext_type[type] =
+            added_obsolete_by_type[type] -
+            gc_ret.total_reclaimed_space_by_ext_type[type];
+      else
+        net_obs_by_ext_type[type] = added_obsolete_by_type[type];
+
+      this->obs_by_ext_types[type] +=
+          net_obs_by_ext_type[type] * this->gc_cycle;
+    }
+    unlock(metric_mtx);
+
+    lock(mtx);
+    if (next_del_obj)
+      this->event_mngr->put_event(next_del_time, next_del_obj);
+    unlock(mtx);
+
+    return added_obsolete_this_gc;
+  }
+
   /*
    * Returns the metrics from the simulation
    */
@@ -203,105 +320,8 @@ public:
     obj_ptr next_del_obj = nullptr;
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
-      double added_obsolete_this_gc = 0;
-      unordered_map<string, double> added_obsolete_by_type =
-          unordered_map<string, double>();
-      // std::cout << "next_del_time" << next_del_time << "configtime " << configtime << "ret.dc_size" << ret.dc_size << std::endl;
-      for (auto it : this->obs_by_ext_types)
-        added_obsolete_by_type[it.first] = 0;
-
-      // Find all candidates for GC
-      set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
-      while (next_del_time <= configtime && !event_mngr->empty()) {
-        del_result dr = this->del_object(next_del_obj);
-        gc_stripes_set->insert(dr.gc_stripes_set.begin(),
-                              dr.gc_stripes_set.end());
-        added_obsolete_this_gc += dr.total_added_obsolete;
-        // Since garbage collection has to wait for gc cycle need to
-        // add how long the data sits around before the garbage
-        // collection kicks in to the obsolete data metric.
-        ret.total_obsolete +=
-            dr.total_added_obsolete * (configtime - next_del_time);
-        for (auto it : dr.ext_types) {
-          if (added_obsolete_by_type.find(it.first) ==
-              added_obsolete_by_type.end()) {
-            added_obsolete_by_type[it.first] = it.second;
-            this->obs_by_ext_types[it.first] =
-                it.second * (configtime - next_del_time);
-          } else {
-            added_obsolete_by_type[it.first] += it.second;
-            this->obs_by_ext_types[it.first] +=
-                it.second * (configtime - next_del_time);
-          }
-        }
-
-        if (!this->event_mngr->empty()) {
-          auto e = this->event_mngr->events->top();
-          this->event_mngr->events->pop();
-          next_del_time = std::get<0>(e);
-          next_del_obj = std::get<1>(e);
-        }
-      }
-      this->event_mngr->put_event(next_del_time, next_del_obj);
-      auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
-      delete gc_stripes_set;
-      if (!this->event_mngr->empty()) {
-        auto e = this->event_mngr->events->top();
-        this->event_mngr->events->pop();
-        next_del_time = std::get<0>(e);
-        next_del_obj = std::get<1>(e);
-      }
-
-      ret.total_reclaimed_space += gc_ret.reclaimed_space;
-      ret.total_exts_gced += gc_ret.total_num_exts_replaced;
-      ret.new_obj_reads += gc_ret.total_user_reads;
-      ret.new_obj_writes += gc_ret.total_user_writes;
-
-      ret.total_valid_obj_transfers += gc_ret.total_valid_obj_transfers;
-      ret.total_storage_node_to_parity_calculator +=
-          gc_ret.total_storage_node_to_parity_calculator;
-
-      ret.total_global_parity_reads += gc_ret.total_global_parity_reads;
-      ret.total_global_parity_writes += gc_ret.total_global_parity_writes;
-      ret.total_local_parity_reads += gc_ret.total_local_parity_reads;
-      ret.total_local_parity_writes += gc_ret.total_local_parity_writes;
-      ret.total_obsolete_data_reads += gc_ret.total_obsolete_data_reads;
-      ret.total_absent_data_reads += gc_ret.total_absent_data_reads;
-
-      net_obsolete += added_obsolete_this_gc - gc_ret.reclaimed_space;
-
-      for (auto it : gc_ret.total_reclaimed_space_by_ext_type) {
-        if (ret.total_reclaimed_space_by_ext_type.find(it.first) ==
-            ret.total_reclaimed_space_by_ext_type.end())
-          ret.total_reclaimed_space_by_ext_type[it.first] = it.second;
-        else
-          ret.total_reclaimed_space_by_ext_type[it.first] += it.second;
-      }
-      for (auto it : this->obs_by_ext_types) {
-        const string type = it.first;
-        auto net_obs_it = net_obs_by_ext_type.find(type);
-        auto total_rec_it = gc_ret.total_reclaimed_space_by_ext_type.find(type);
-
-        if (net_obs_it != net_obs_by_ext_type.end() &&
-            total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
-          net_obs_by_ext_type[type] +=
-              added_obsolete_by_type[type] -
-              gc_ret.total_reclaimed_space_by_ext_type[type];
-        else if (net_obs_it != net_obs_by_ext_type.end())
-          net_obs_by_ext_type[type] += added_obsolete_by_type[type];
-        else if (total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
-          net_obs_by_ext_type[type] =
-              added_obsolete_by_type[type] -
-              gc_ret.total_reclaimed_space_by_ext_type[type];
-        else
-          net_obs_by_ext_type[type] = added_obsolete_by_type[type];
-
-        this->obs_by_ext_types[type] +=
-            net_obs_by_ext_type[type] * this->gc_cycle;
-      }
-
-      if (next_del_obj)
-        this->event_mngr->put_event(next_del_time, next_del_obj);
+      double added_obsolete_this_gc = run_gc(ret, next_del_time, next_del_obj,
+                                             net_obsolete, net_obs_by_ext_type);
 
       auto str_result = this->coordinator->generate_stripes();
       if (!this->event_mngr->empty()) {
@@ -313,7 +333,7 @@ public:
       ret.total_used_space += used_space * this->striping_cycle;
       ret.new_obj_writes += str_result.writes;
       ret.new_obj_reads += str_result.reads;
-      
+
       ret.striper_parities += (str_result.writes - str_result.reads);
 
       used_space = this->stripe_mngr->get_data_dc_size();
@@ -350,6 +370,27 @@ public:
          << endl;
     ret.obs_percentages = obs_percentages;
     return ret;
+  }
+
+public:
+  DataCenter(unsigned long max_size, float striping_cycle,
+             shared_ptr<AbstractStriperDecorator> striper,
+             shared_ptr<StripeManager> stripe_mngr,
+             shared_ptr<ExtentManager> ext_mngr,
+             shared_ptr<ObjectManager> obj_mngr,
+             shared_ptr<EventManager> event_mngr,
+             shared_ptr<GarbageCollectionStrategy> gc_strategy,
+             shared_ptr<StripingProcessCoordinator> coordinator, float simul_time,
+             float gc_cycle, int nthreads = 1)
+      : max_size(max_size), striping_cycle(striping_cycle), striper(striper),
+        ext_mngr(ext_mngr), obj_mngr(obj_mngr), event_mngr(event_mngr),
+        gc_strategy(gc_strategy), coordinator(coordinator),
+        simul_time(simul_time), gc_cycle(gc_cycle), gced_space(0),
+        obs_by_ext_types(unordered_map<string, long double>()),
+        stripe_mngr(stripe_mngr), nthreads(nthreads) {
+    threads = std::vector<std::thread>(nthreads);
+    mtx = make_shared<mutex>();
+    metric_mtx = make_shared<mutex>();
   }
 
   sim_metric run_simulation() {

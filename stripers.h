@@ -76,14 +76,12 @@ public:
                            float simulation_time) override {
     
     int num_exts = stripe_manager->num_data_exts_per_stripe;
-    // std::cout << "num_exts create_stripes simple " << num_exts << std::endl;
     int writes = 0;
     int reads = 0;
     int stripes = 0;
     list<ext_ptr > exts_to_stripe = extent_stack->pop_stripe_num_exts(num_exts);
     stripe_ptr current_stripe =
         stripe_manager->create_new_stripe(exts_to_stripe.front()->ext_size);
-    // std::cout << "exts_to_stripe.size() create_stripes simple " << exts_to_stripe.size() << std::endl;
     for (int i = 0; i < num_exts; i++) {
       ext_ptr ext = exts_to_stripe.front();
       exts_to_stripe.pop_front();
