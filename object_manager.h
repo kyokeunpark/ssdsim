@@ -3,6 +3,7 @@
 #include "event_manager.h"
 #include "extent_object_stripe.h"
 #include "samplers.h"
+#include "lock.h"
 #include <memory>
 #include <unordered_map>
 
@@ -12,6 +13,7 @@ using obj_record = std::pair<obj_ptr, float>;
 using object_lst = std::vector<obj_record>;
 
 class ObjectManager {
+  shared_ptr<mutex> mtx = nullptr;
 public:
   int max_id;
   shared_ptr<EventManager> event_manager;
@@ -21,12 +23,14 @@ public:
 
   ObjectManager() {}
   ObjectManager(shared_ptr<EventManager> e_m, shared_ptr<Sampler> s,
-                bool a_n = true)
+                bool a_n = true, bool is_threaded = false)
       : objects(unordered_map<int, obj_ptr>()),
         event_manager(e_m), sampler(s),
         add_noise(a_n) {
     max_id = 0;
     srand(0);
+    if (is_threaded)
+      mtx = make_shared<mutex>();
   }
 
   // docstring and code doesnt match managers.py
@@ -46,24 +50,32 @@ public:
       }
       life += configtime;
       obj_ptr obj = make_shared<ExtentObject>(max_id, size, life);
+      lock(mtx);
       new_objs.emplace_back(std::make_pair(obj, size));
       this->objects[max_id] = obj;
       max_id++;
       event_manager->put_event(life, obj);
+      unlock(mtx);
     }
     return new_objs;
   }
 
   obj_ptr get_object(int obj_id) {
-    if (this->objects.find(obj_id) != this->objects.end())
+    lock(mtx);
+    if (this->objects.find(obj_id) != this->objects.end()) {
+      unlock(mtx);
       return this->objects[obj_id];
+    }
+    unlock(mtx);
     return nullptr;
   }
 
   int get_num_objs() { return objects.size(); }
 
   void remove_object(obj_ptr obj) {
+    lock(mtx);
     objects.erase(obj->id);
+    unlock(mtx);
   }
 
   ~ObjectManager() {}

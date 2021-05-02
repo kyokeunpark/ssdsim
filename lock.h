@@ -6,6 +6,7 @@
 #include <mutex>
 
 using std::shared_ptr;
+using std::make_shared;
 using std::mutex;
 
 // This way, mutex is only used when multithreading configuration is loaded

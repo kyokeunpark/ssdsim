@@ -174,38 +174,38 @@ class DataCenter {
     return ret;
   }
 
-  double run_gc(eh_result & res, float & next_del_time,
-              obj_ptr & next_del_obj, double & net_obsolete,
-              unordered_map<string, double> & net_obs_by_ext_type) {
-    double added_obsolete_this_gc = 0;
+  void run_gc(eh_result * res, float * next_del_time,
+              obj_ptr next_del_obj, double * net_obsolete,
+              unordered_map<string, double> * net_obs_by_ext_type,
+              double * added_obsolete_this_gc) {
     unordered_map<string, double> added_obsolete_by_type =
         unordered_map<string, double>();
     for (auto it : this->obs_by_ext_types)
       added_obsolete_by_type[it.first] = 0;
     // Find all candidates for GC
     set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
-    while (next_del_time <= configtime && !event_mngr->empty()) {
+    while (*next_del_time <= configtime && !event_mngr->empty()) {
       del_result dr = this->del_object(next_del_obj);
       gc_stripes_set->insert(dr.gc_stripes_set.begin(),
                             dr.gc_stripes_set.end());
-      added_obsolete_this_gc += dr.total_added_obsolete;
+      *added_obsolete_this_gc += dr.total_added_obsolete;
 
       // Since garbage collection has to wait for gc cycle need to
       // add how long the data sits around before the garbage
       // collection kicks in to the obsolete data metric.
       lock(metric_mtx);
-      res.total_obsolete +=
-          dr.total_added_obsolete * (configtime - next_del_time);
+      res->total_obsolete +=
+          dr.total_added_obsolete * (configtime - *next_del_time);
       for (auto it : dr.ext_types) {
         if (added_obsolete_by_type.find(it.first) ==
             added_obsolete_by_type.end()) {
           added_obsolete_by_type[it.first] = it.second;
           this->obs_by_ext_types[it.first] =
-              it.second * (configtime - next_del_time);
+              it.second * (configtime - *next_del_time);
         } else {
           added_obsolete_by_type[it.first] += it.second;
           this->obs_by_ext_types[it.first] +=
-              it.second * (configtime - next_del_time);
+              it.second * (configtime - *next_del_time);
         }
       }
       unlock(metric_mtx);
@@ -214,80 +214,78 @@ class DataCenter {
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();
         this->event_mngr->events->pop();
-        next_del_time = std::get<0>(e);
+        *next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
       }
       unlock(mtx);
     }
 
     lock(mtx);
-    this->event_mngr->put_event(next_del_time, next_del_obj);
+    this->event_mngr->put_event(*next_del_time, next_del_obj);
     auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
     delete gc_stripes_set;
     if (!this->event_mngr->empty()) {
       auto e = this->event_mngr->events->top();
       this->event_mngr->events->pop();
-      next_del_time = std::get<0>(e);
+      *next_del_time = std::get<0>(e);
       next_del_obj = std::get<1>(e);
     }
     unlock(mtx);
 
     lock(metric_mtx);
-    res.total_reclaimed_space += gc_ret.reclaimed_space;
-    res.total_exts_gced += gc_ret.total_num_exts_replaced;
-    res.new_obj_reads += gc_ret.total_user_reads;
-    res.new_obj_writes += gc_ret.total_user_writes;
+    res->total_reclaimed_space += gc_ret.reclaimed_space;
+    res->total_exts_gced += gc_ret.total_num_exts_replaced;
+    res->new_obj_reads += gc_ret.total_user_reads;
+    res->new_obj_writes += gc_ret.total_user_writes;
 
-    res.total_valid_obj_transfers += gc_ret.total_valid_obj_transfers;
-    res.total_storage_node_to_parity_calculator +=
-        gc_ret.total_storage_node_to_parity_calculator;
+    res->total_valid_obj_transfers += gc_ret.total_valid_obj_transfers;
+    res->total_storage_node_to_parity_calculator +=
+      gc_ret.total_storage_node_to_parity_calculator;
 
-    res.total_global_parity_reads += gc_ret.total_global_parity_reads;
-    res.total_global_parity_writes += gc_ret.total_global_parity_writes;
-    res.total_local_parity_reads += gc_ret.total_local_parity_reads;
-    res.total_local_parity_writes += gc_ret.total_local_parity_writes;
-    res.total_obsolete_data_reads += gc_ret.total_obsolete_data_reads;
-    res.total_absent_data_reads += gc_ret.total_absent_data_reads;
+    res->total_global_parity_reads += gc_ret.total_global_parity_reads;
+    res->total_global_parity_writes += gc_ret.total_global_parity_writes;
+    res->total_local_parity_reads += gc_ret.total_local_parity_reads;
+    res->total_local_parity_writes += gc_ret.total_local_parity_writes;
+    res->total_obsolete_data_reads += gc_ret.total_obsolete_data_reads;
+    res->total_absent_data_reads += gc_ret.total_absent_data_reads;
 
-    net_obsolete += added_obsolete_this_gc - gc_ret.reclaimed_space;
+    *net_obsolete += *added_obsolete_this_gc - gc_ret.reclaimed_space;
 
     for (auto it : gc_ret.total_reclaimed_space_by_ext_type) {
-      if (res.total_reclaimed_space_by_ext_type.find(it.first) ==
-          res.total_reclaimed_space_by_ext_type.end())
-        res.total_reclaimed_space_by_ext_type[it.first] = it.second;
+      if (res->total_reclaimed_space_by_ext_type.find(it.first) ==
+          res->total_reclaimed_space_by_ext_type.end())
+        res->total_reclaimed_space_by_ext_type[it.first] = it.second;
       else
-        res.total_reclaimed_space_by_ext_type[it.first] += it.second;
+        res->total_reclaimed_space_by_ext_type[it.first] += it.second;
     }
     for (auto it : this->obs_by_ext_types) {
       const string type = it.first;
-      auto net_obs_it = net_obs_by_ext_type.find(type);
+      auto net_obs_it = net_obs_by_ext_type->find(type);
       auto total_rec_it = gc_ret.total_reclaimed_space_by_ext_type.find(type);
 
-      if (net_obs_it != net_obs_by_ext_type.end() &&
+      if (net_obs_it != net_obs_by_ext_type->end() &&
           total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
-        net_obs_by_ext_type[type] +=
+        (*net_obs_by_ext_type)[type] +=
             added_obsolete_by_type[type] -
             gc_ret.total_reclaimed_space_by_ext_type[type];
-      else if (net_obs_it != net_obs_by_ext_type.end())
-        net_obs_by_ext_type[type] += added_obsolete_by_type[type];
+      else if (net_obs_it != net_obs_by_ext_type->end())
+        (*net_obs_by_ext_type)[type] += added_obsolete_by_type[type];
       else if (total_rec_it != gc_ret.total_reclaimed_space_by_ext_type.end())
-        net_obs_by_ext_type[type] =
+        (*net_obs_by_ext_type)[type] =
             added_obsolete_by_type[type] -
             gc_ret.total_reclaimed_space_by_ext_type[type];
       else
-        net_obs_by_ext_type[type] = added_obsolete_by_type[type];
+        (*net_obs_by_ext_type)[type] = added_obsolete_by_type[type];
 
       this->obs_by_ext_types[type] +=
-          net_obs_by_ext_type[type] * this->gc_cycle;
+          (*net_obs_by_ext_type)[type] * this->gc_cycle;
     }
     unlock(metric_mtx);
 
     lock(mtx);
     if (next_del_obj)
-      this->event_mngr->put_event(next_del_time, next_del_obj);
+      this->event_mngr->put_event(*next_del_time, next_del_obj);
     unlock(mtx);
-
-    return added_obsolete_this_gc;
   }
 
   /*
@@ -308,8 +306,15 @@ class DataCenter {
     obj_ptr next_del_obj = nullptr;
     while (configtime <= this->simul_time &&
            ret.dc_size < this->max_size) {
-      double added_obsolete_this_gc = run_gc(ret, next_del_time, next_del_obj,
-                                             net_obsolete, net_obs_by_ext_type);
+      std::thread t1;
+      double added_obsolete_this_gc = 0;
+      if (nthreads == 1) {
+        run_gc(&ret, &next_del_time, next_del_obj, &net_obsolete,
+               &net_obs_by_ext_type, &added_obsolete_this_gc);
+      } else {
+        t1 = std::thread(&DataCenter::run_gc, this, &ret, &next_del_time, next_del_obj,
+                         &net_obsolete, &net_obs_by_ext_type, &added_obsolete_this_gc);
+      }
 
       auto str_result = this->coordinator->generate_stripes();
       if (!this->event_mngr->empty()) {
@@ -342,6 +347,9 @@ class DataCenter {
         obs_timestamp = configtime;
         daily_max_perc = 0;
       }
+
+      if (nthreads != 1)
+        t1.join();
 
       configtime += this->gc_cycle;
       ret.dc_size = this->stripe_mngr->get_total_dc_size();

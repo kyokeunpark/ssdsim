@@ -2,6 +2,7 @@
 #include "extent_manager.h"
 #include "extent_stack.h"
 #include "stripe_manager.h"
+#include "lock.h"
 #include <array>
 #include <memory>
 
@@ -30,15 +31,22 @@ typedef struct replacement_costs {
 } repl_costs;
 
 class AbstractStriper {
+
+protected:
+  shared_ptr<mutex> mtx = nullptr;
 public:
   shared_ptr<StripeManager> stripe_manager;
   shared_ptr<ExtentManager> extent_manager;
   int num_times_alternatives;
   int num_times_default;
   AbstractStriper() {}
-  AbstractStriper(shared_ptr<StripeManager> s_m, shared_ptr<ExtentManager> e_m)
+  AbstractStriper(shared_ptr<StripeManager> s_m, shared_ptr<ExtentManager> e_m,
+                  bool is_threaded = false)
       : stripe_manager(s_m), extent_manager(e_m), num_times_alternatives(0),
-        num_times_default(0) {}
+        num_times_default(0) {
+    if (is_threaded)
+      mtx = make_shared<mutex>();
+  }
 
   virtual str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                                    float simulation_time) {
@@ -75,11 +83,12 @@ public:
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                            float simulation_time) override {
     
+    lock(mtx);
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     int writes = 0;
     int reads = 0;
     int stripes = 0;
-    list<ext_ptr > exts_to_stripe = extent_stack->pop_stripe_num_exts(num_exts);
+    list<ext_ptr> exts_to_stripe = extent_stack->pop_stripe_num_exts(num_exts);
     stripe_ptr current_stripe =
         stripe_manager->create_new_stripe(exts_to_stripe.front()->ext_size);
     for (int i = 0; i < num_exts; i++) {
@@ -90,6 +99,7 @@ public:
       reads += ext->ext_size;
     }
     stripes += 1;
+    unlock(mtx);
     return {stripes, reads, writes};
   }
 
@@ -106,8 +116,8 @@ protected:
   shared_ptr<AbstractStriper> striper;
 
 public:
-  AbstractStriperDecorator(shared_ptr<AbstractStriper> s)
-      : AbstractStriper(s->stripe_manager, s->extent_manager), striper(s) {}
+  AbstractStriperDecorator(shared_ptr<AbstractStriper> s, bool is_threaded = false)
+      : AbstractStriper(s->stripe_manager, s->extent_manager, is_threaded), striper(s) {}
 
   virtual str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
                                   float simulation_time) = 0;
@@ -134,19 +144,23 @@ public:
 
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                            float simulation_time) override {
+    lock(mtx);
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     str_costs total = {0};
     while (extent_stack->num_stripes(num_exts))
       total += striper->create_stripes(extent_stack, simulation_time);
+    unlock(mtx);
     return total;
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
                           float simulation_time) override {
+    lock(mtx);
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     str_costs total = {0};
     if (extent_stack->num_stripes(num_exts))
       total += striper->create_stripes(extent_stack, simulation_time);
+    unlock(mtx);
     return total;
   }
 
@@ -193,22 +207,26 @@ protected:
   shared_ptr<AbstractStriper> striper;
 
 public:
-  StriperWithEC(shared_ptr<AbstractStriper> s)
-      : AbstractStriperDecorator(s), striper(s) {}
+  StriperWithEC(shared_ptr<AbstractStriper> s, bool is_threaded = false)
+      : AbstractStriperDecorator(s, is_threaded), striper(s) {}
 
   int num_stripes_reqd() override { return striper->num_stripes_reqd(); }
 
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                            float simulation_time) override {
+    lock(mtx);
     str_costs res = striper->create_stripes(extent_stack, simulation_time);
     res.writes *= stripe_manager->coding_overhead;
+    unlock(mtx);
     return res;
   }
 
   str_costs create_stripe(shared_ptr<AbstractExtentStack> extent_stack,
                           float simulation_time) override {
+    lock(mtx);
     str_costs res = striper->create_stripe(extent_stack, simulation_time);
     res.writes *= stripe_manager->coding_overhead;
+    unlock(mtx);
     return res;
   }
   repl_costs
@@ -217,6 +235,7 @@ public:
                           vector<int> valid_objs_per_locality) override {
     repl_costs costs = {0, 0, 0, 0, 0, 0, 0};
     int total_exts_replaced = 0;
+    lock(mtx);
     for (int i = 0; i < exts_per_locality.size(); i++) {
       total_exts_replaced += exts_per_locality[i];
     }
@@ -244,6 +263,7 @@ public:
         costs.local_parity_writes += ext_size;
       }
     }
+    unlock(mtx);
     costs.global_parity_reads +=
           stripe_manager->num_global_parities * ext_size;
     costs.global_parity_writes +=

@@ -27,22 +27,24 @@ create_managers(const int num_data_exts, const int num_local_parities,
                 const int num_global_parities, const int num_localities,
                 const shared_ptr<SimpleSampler> sampler, const int ext_size,
                 float (Extent::*key_fnc)(), const float coding_overhead = 0,
-                const bool add_noise = true) {
+                const bool add_noise = true, const bool is_threaded = false) {
   shared_ptr<StripeManager> stripe_mngr;
   if (coding_overhead != 0) {
     stripe_mngr = make_shared<StripeManager>(num_data_exts, num_local_parities,
                                              num_global_parities,
-                                             num_localities, coding_overhead);
+                                             num_localities, coding_overhead,
+                                             is_threaded);
   } else {
     stripe_mngr = make_shared<StripeManager>(num_data_exts, num_local_parities,
                                              num_global_parities,
-                                             num_localities, coding_overhead);
+                                             num_localities, coding_overhead,
+                                             is_threaded);
   }
-  shared_ptr<EventManager> event_mngr = make_shared<EventManager>();
+  shared_ptr<EventManager> event_mngr = make_shared<EventManager>(is_threaded);
   shared_ptr<ObjectManager> obj_mngr =
-      make_shared<ObjectManager>(event_mngr, sampler, add_noise);
+      make_shared<ObjectManager>(event_mngr, sampler, add_noise, is_threaded);
   shared_ptr<ExtentManager> ext_mngr =
-      make_shared<ExtentManager>(ext_size, key_fnc);
+      make_shared<ExtentManager>(ext_size, key_fnc, is_threaded);
   return std::make_tuple(stripe_mngr, event_mngr, obj_mngr, ext_mngr);
 }
 
@@ -1157,15 +1159,76 @@ inline DataCenter generational_config(
       make_shared<BestEffortStripingProcessCoordinator>(
           obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
           gc_extent_stack, stripe_mngr, simul_time, default_key);
-  /*TODO
-gc_strategy = StripeLevelNoExtsGCStrategy(primary_threshold,
-secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr)
-  */
   shared_ptr<GarbageCollectionStrategy> gc_strategy = make_shared<StripeLevelNoExtsGCStrategy> (primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper, stripe_mngr);
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
                  simul_time, deletion_cycle);
+
+  return data_center;
+}
+
+// MULTITHREADED
+
+inline DataCenter stripe_level_with_no_exts_config_mt(
+    const unsigned long data_center_size, const float striping_cycle,
+    const float simul_time, const int ext_size, const short primary_threshold,
+    const short secondary_threshold, shared_ptr<SimpleSampler> sampler,
+    const short num_stripes_per_cycle, const float deletion_cycle,
+    const int num_objs) {
+  int num_data_exts = 1;
+  float coding_overhead = 18.0 / 14.0;
+  float num_global_parities = 2.0 / 14.0;
+  float num_local_parities = 2.0 / 14.0;
+  int num_localities = 1;
+  std::tuple<shared_ptr<StripeManager>, shared_ptr<EventManager>,
+             shared_ptr<ObjectManager>, shared_ptr<ExtentManager>>
+      mngrs = create_managers(num_data_exts, num_local_parities,
+                              num_global_parities, num_localities, sampler,
+                              ext_size, &Extent::get_default_key,
+                              coding_overhead);
+  shared_ptr<StripeManager> stripe_mngr =
+      std::get<shared_ptr<StripeManager>>(mngrs);
+  shared_ptr<ExtentManager> ext_mngr =
+      std::get<shared_ptr<ExtentManager>>(mngrs);
+  shared_ptr<ObjectManager> obj_mngr =
+      std::get<shared_ptr<ObjectManager>>(mngrs);
+  shared_ptr<EventManager> event_mngr =
+      std::get<shared_ptr<EventManager>>(mngrs);
+
+  shared_ptr<AbstractStriperDecorator> striper =
+      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
+          make_shared<SimpleStriper>(stripe_mngr, ext_mngr, true)), true);
+  shared_ptr<StriperWithEC> gc_striper =
+      make_shared<StriperWithEC>(make_shared<ExtentStackStriper>(
+          make_shared<SimpleStriper>(stripe_mngr, ext_mngr, true)), true);
+  static auto temp_op = make_shared<object_lst>();
+  static auto temp_op_gc = make_shared<object_lst>();
+  static auto temp_curr_exts = make_shared<current_extents>();
+  static auto temp_curr_exts_gc = make_shared<current_extents>();
+  shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
+      obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
+      primary_threshold, true);
+
+  shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
+      make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, temp_op_gc ,
+                                        temp_curr_exts_gc, num_objs,
+                                        primary_threshold, true);
+  shared_ptr<AbstractExtentStack> extent_stack =
+      make_shared<SingleExtentStack<>>(stripe_mngr, true);
+  shared_ptr<AbstractExtentStack> gc_extent_stack =
+      make_shared<SingleExtentStack<>>(stripe_mngr, true);
+  shared_ptr<StripingProcessCoordinator> coordinator =
+      make_shared<StripingProcessCoordinator>(
+          obj_packer, gc_obj_packer, striper, gc_striper, extent_stack,
+          gc_extent_stack, stripe_mngr, simul_time);
+  auto gc_strategy = make_shared<StripeLevelNoExtsGCStrategy>(
+      primary_threshold, secondary_threshold, ext_mngr, coordinator, gc_striper,
+      stripe_mngr);
+  DataCenter data_center =
+      DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
+                 ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
+                 simul_time, deletion_cycle, true);
 
   return data_center;
 }
