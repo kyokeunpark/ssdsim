@@ -13,7 +13,6 @@ using event = std::tuple<float, obj_ptr>;
 using e_queue = std::priority_queue<event, std::vector<event>, std::greater<event>>;
 
 class EventManager {
-
   shared_ptr<mutex> mtx = nullptr;
 
 public:
@@ -37,5 +36,17 @@ public:
     }
     unlock(mtx);
   }
+
   bool empty() { return events->empty(); }
+
+  event pop_event() {
+    event e(-1, nullptr);
+    lock(mtx);
+    if (!this->events->empty()) {
+      e = this->events->top();
+      this->events->pop();
+    }
+    unlock(mtx);
+    return e;
+  }
 };
