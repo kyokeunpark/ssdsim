@@ -83,7 +83,6 @@ public:
   str_costs create_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                            float simulation_time) override {
     
-    lock(mtx);
     int num_exts = stripe_manager->num_data_exts_per_stripe;
     int writes = 0;
     int reads = 0;
@@ -99,7 +98,6 @@ public:
       reads += ext->ext_size;
     }
     stripes += 1;
-    unlock(mtx);
     return {stripes, reads, writes};
   }
 

@@ -210,17 +210,14 @@ class DataCenter {
       }
       unlock(metric_mtx);
 
-      lock(mtx);
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();
         this->event_mngr->events->pop();
         *next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
       }
-      unlock(mtx);
     }
 
-    lock(mtx);
     this->event_mngr->put_event(*next_del_time, next_del_obj);
     auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
     delete gc_stripes_set;
@@ -230,7 +227,6 @@ class DataCenter {
       *next_del_time = std::get<0>(e);
       next_del_obj = std::get<1>(e);
     }
-    unlock(mtx);
 
     lock(metric_mtx);
     res->total_reclaimed_space += gc_ret.reclaimed_space;
@@ -282,10 +278,9 @@ class DataCenter {
     }
     unlock(metric_mtx);
 
-    lock(mtx);
     if (next_del_obj)
       this->event_mngr->put_event(*next_del_time, next_del_obj);
-    unlock(mtx);
+    cout << configtime << ": gc done" << endl;
   }
 
   /*
@@ -323,19 +318,22 @@ class DataCenter {
         next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
       }
+      cout << configtime << ": stripe generator done" << endl;
+
+      if (nthreads != 1)
+        t1.join();
+
       ret.total_used_space += used_space * this->striping_cycle;
       ret.new_obj_writes += str_result.writes;
       ret.new_obj_reads += str_result.reads;
-
       ret.striper_parities += (str_result.writes - str_result.reads);
-
-      used_space = this->stripe_mngr->get_data_dc_size();
-
       ret.total_obsolete += net_obsolete * this->gc_cycle;
       obs_perc = -1;
-      if (used_space > 0)
         obs_perc =
             (added_obsolete_this_gc + net_obsolete) / used_space * 100;
+      unlock(metric_mtx);
+
+      used_space = this->stripe_mngr->get_data_dc_size();
       daily_max_perc = std::max(obs_perc, daily_max_perc);
 
       // Keep a record of the daily maximum obsolete percentage, ignore
@@ -347,9 +345,6 @@ class DataCenter {
         obs_timestamp = configtime;
         daily_max_perc = 0;
       }
-
-      if (nthreads != 1)
-        t1.join();
 
       configtime += this->gc_cycle;
       ret.dc_size = this->stripe_mngr->get_total_dc_size();

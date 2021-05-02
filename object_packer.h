@@ -463,7 +463,7 @@ public:
     }
 
     // Mix valid and fresh objects
-object_lst * obj_lst = new object_lst();
+    object_lst * obj_lst = new object_lst();
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4.0 + round(fmod(rem_size, 4) / 4.0); i++)

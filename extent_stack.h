@@ -168,8 +168,6 @@ public:
   list<ext_ptr > pop_stripe_num_exts(int stripe_size) override {
     list<ext_ptr > ret;
     int num_left_to_add = stripe_size;
-    // std::cout << "num_left_to_add pop_stripe_num_exts singleES" << stripe_size << std::endl;
-    // std::cout << "get_length_of_extent_stack pop_stripe_num_exts singleES" << this->get_length_of_extent_stack() << std::endl;
     if (this->get_length_of_extent_stack() < num_left_to_add) {
       return ret;
     }
