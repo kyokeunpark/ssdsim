@@ -5,10 +5,12 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 
 using std::max;
 using std::min;
 using std::shared_ptr;
+using std::mutex;
 typedef vector<ext_ptr > *extent_stack_ext_lst;
 /*
  * Struct used to check if a pointer to an extent exists within a
@@ -34,11 +36,22 @@ using ext_lst_stack_desc = std::map<float, stack_lst, std::greater<float>>;
 
 class AbstractExtentStack {
 protected:
-  std::shared_ptr<StripeManager> stripe_manager;
+  shared_ptr<StripeManager> stripe_manager;
+  shared_ptr<mutex> mtx;
+  inline void lock() {
+    if (mtx) mtx->lock();
+  }
+  inline void unlock() {
+    if (mtx) mtx->unlock();
+  }
 
 public:
   AbstractExtentStack() : stripe_manager(nullptr) {}
-  AbstractExtentStack(shared_ptr<StripeManager> s_m) : stripe_manager(s_m) {}
+  AbstractExtentStack(shared_ptr<StripeManager> s_m, bool is_threaded = false)
+      : stripe_manager(s_m) {
+    if (is_threaded)
+      mtx = make_shared<mutex>();
+  }
   virtual ~AbstractExtentStack() {}
 
   virtual int num_stripes(int stripe_size) = 0;
@@ -62,8 +75,13 @@ protected:
   ext_stack_T extent_stack;
 
 public:
-  ExtentStack(shared_ptr<StripeManager> s_m)
-      : AbstractExtentStack(s_m), extent_stack(ext_stack_T()) {}
+  // If the "parent" extent stack handles the lock, then the extent stack
+  //
+  ExtentStack(shared_ptr<StripeManager> s_m, bool is_threaded = false)
+      : AbstractExtentStack(s_m), extent_stack(ext_stack_T()) {
+    if (is_threaded)
+      mtx = make_shared<mutex>();
+  }
 
   virtual int num_stripes(int stripe_size) override = 0;
 

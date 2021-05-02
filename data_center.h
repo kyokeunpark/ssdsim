@@ -14,6 +14,7 @@
 #include "stripe_manager.h"
 #include "stripers.h"
 #include "striping_process_coordinator.h"
+#include "lock.h"
 #include <algorithm>
 #include <iostream>
 #include <set>
@@ -24,8 +25,8 @@
 using std::cout, std::cerr, std::endl;
 using std::set;
 using std::unordered_map;
-using std::mutex;
 using std::shared_ptr;
+
 inline std::ostream &operator<<(std::ostream &os,  unordered_map<string, double> &dict) {
   os<< "{";
   int count = 0;
@@ -131,16 +132,6 @@ class DataCenter {
   shared_ptr<StripingProcessCoordinator> coordinator;
   unordered_map<string, long double> obs_by_ext_types;
 
-  inline void lock(shared_ptr<mutex> mtx) {
-    if (this->nthreads != 1)
-      mtx->lock();
-  }
-
-  inline void unlock(shared_ptr<mutex> mtx) {
-    if (this->nthreads != 1)
-      mtx->unlock();
-  }
-
   /*
    * Returns the amount of added obsolete data, a set of stripes affected by
    * the deletion of object with obj_id and a dict mapping extent types
@@ -149,9 +140,7 @@ class DataCenter {
   del_result del_object(obj_ptr obj) {
     del_result ret;
     auto ext_lst = obj->extents;
-    //  std::reverse(ext_lst.begin(), ext_lst.end());
     for (auto ex : ext_lst) {
-      // cout << ex->type << endl;
       obj->remove_extent(ex);
 
       // Size of obj in extent
@@ -159,7 +148,6 @@ class DataCenter {
       this->gced_space += temp;
       ex->del_object(obj);
 
-      // std::cout << "TESTING " << obj->id << ", " << temp << std::endl;
       // Extent in stripe
       if (ex->stripe != nullptr) {
         if (ret.ext_types.find(ex->type) != ret.ext_types.end())

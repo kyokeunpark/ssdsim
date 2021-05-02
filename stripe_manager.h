@@ -1,6 +1,7 @@
 #pragma once
 #include "config.h"
 #include "extent_object_stripe.h"
+#include "lock.h"
 #include <cstdio>
 #include <set>
 // get_extents(stripe id) not used anywhere not implemented

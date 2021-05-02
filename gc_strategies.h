@@ -119,7 +119,7 @@ public:
     add_num_gc_cycles(1);
     set<obj_ptr> objs;
     set<int> local_parities;
-    std::list<ext_ptr > extent_list = stripe->extents;
+    std::list<ext_ptr> extent_list = stripe->extents;
     space_ext_type_map reclaimed_space_by_ext_types;
     for (ext_ptr ext : extent_list) {
       assert(ext->get_obsolete_percentage() <= 100);

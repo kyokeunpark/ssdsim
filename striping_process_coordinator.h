@@ -62,11 +62,9 @@ public:
   }
 
   str_costs generate_stripes() {
-    // std::cout << "generating stripes" << std::endl;
     return stripe_generator(striper, object_packer, extent_stack);
   }
   str_costs generate_gc_stripes() {
-    // std::cout << "generating gc stripes" << std::endl;
     return stripe_generator(gc_striper, gc_object_packer, gc_extent_stack);
   }
   int get_length_extent_stack() {
