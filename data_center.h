@@ -185,7 +185,11 @@ class DataCenter {
     // Find all candidates for GC
     set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
     while (*next_del_time <= configtime && !event_mngr->empty()) {
-      del_result dr = this->del_object(next_del_obj);
+      del_result dr;
+      lock(mtx);
+      if (next_del_obj)
+        dr = this->del_object(next_del_obj);
+      unlock(mtx);
       gc_stripes_set->insert(dr.gc_stripes_set.begin(),
                             dr.gc_stripes_set.end());
       *added_obsolete_this_gc += dr.total_added_obsolete;
@@ -210,23 +214,27 @@ class DataCenter {
       }
       unlock(metric_mtx);
 
+      lock(mtx);
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();
         this->event_mngr->events->pop();
         *next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
       }
+      unlock(mtx);
     }
 
     this->event_mngr->put_event(*next_del_time, next_del_obj);
     auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
     delete gc_stripes_set;
+    lock(mtx);
     if (!this->event_mngr->empty()) {
       auto e = this->event_mngr->events->top();
       this->event_mngr->events->pop();
       *next_del_time = std::get<0>(e);
       next_del_obj = std::get<1>(e);
     }
+    unlock(mtx);
 
     lock(metric_mtx);
     res->total_reclaimed_space += gc_ret.reclaimed_space;
@@ -278,8 +286,10 @@ class DataCenter {
     }
     unlock(metric_mtx);
 
+    lock(mtx);
     if (next_del_obj)
       this->event_mngr->put_event(*next_del_time, next_del_obj);
+    unlock(mtx);
     cout << configtime << ": gc done" << endl;
   }
 
@@ -299,25 +309,27 @@ class DataCenter {
     unordered_map<string, double> net_obs_by_ext_type =
         unordered_map<string, double>();
     obj_ptr next_del_obj = nullptr;
-    while (configtime <= this->simul_time &&
-           ret.dc_size < this->max_size) {
+    while (configtime <= this->simul_time && ret.dc_size < this->max_size) {
       std::thread t1;
       double added_obsolete_this_gc = 0;
       if (nthreads == 1) {
         run_gc(&ret, &next_del_time, next_del_obj, &net_obsolete,
                &net_obs_by_ext_type, &added_obsolete_this_gc);
       } else {
-        t1 = std::thread(&DataCenter::run_gc, this, &ret, &next_del_time, next_del_obj,
-                         &net_obsolete, &net_obs_by_ext_type, &added_obsolete_this_gc);
+        t1 = std::thread(&DataCenter::run_gc, this, &ret, &next_del_time,
+                         next_del_obj, &net_obsolete, &net_obs_by_ext_type,
+                         &added_obsolete_this_gc);
       }
 
       auto str_result = this->coordinator->generate_stripes();
+      lock(mtx);
       if (!this->event_mngr->empty()) {
         auto e = this->event_mngr->events->top();
         this->event_mngr->events->pop();
         next_del_time = std::get<0>(e);
         next_del_obj = std::get<1>(e);
       }
+      unlock(mtx);
       cout << configtime << ": stripe generator done" << endl;
 
       if (nthreads != 1)

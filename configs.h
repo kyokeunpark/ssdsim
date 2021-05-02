@@ -1228,7 +1228,7 @@ inline DataCenter stripe_level_with_no_exts_config_mt(
   DataCenter data_center =
       DataCenter(data_center_size, striping_cycle, striper, stripe_mngr,
                  ext_mngr, obj_mngr, event_mngr, gc_strategy, coordinator,
-                 simul_time, deletion_cycle, true);
+                 simul_time, deletion_cycle, 2);
 
   return data_center;
 }
