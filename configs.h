@@ -1186,7 +1186,7 @@ inline DataCenter stripe_level_with_no_exts_config_mt(
       mngrs = create_managers(num_data_exts, num_local_parities,
                               num_global_parities, num_localities, sampler,
                               ext_size, &Extent::get_default_key,
-                              coding_overhead);
+                              coding_overhead, true, true);
   shared_ptr<StripeManager> stripe_mngr =
       std::get<shared_ptr<StripeManager>>(mngrs);
   shared_ptr<ExtentManager> ext_mngr =
@@ -1208,12 +1208,12 @@ inline DataCenter stripe_level_with_no_exts_config_mt(
   static auto temp_curr_exts_gc = make_shared<current_extents>();
   shared_ptr<SimpleObjectPacker> obj_packer = make_shared<SimpleObjectPacker>(
       obj_mngr, ext_mngr, temp_op, temp_curr_exts, num_objs,
-      primary_threshold, true);
+      primary_threshold, true, true);
 
   shared_ptr<SimpleGCObjectPacker> gc_obj_packer =
       make_shared<SimpleGCObjectPacker>(obj_mngr, ext_mngr, temp_op_gc ,
                                         temp_curr_exts_gc, num_objs,
-                                        primary_threshold, true);
+                                        primary_threshold, true, true);
   shared_ptr<AbstractExtentStack> extent_stack =
       make_shared<SingleExtentStack<>>(stripe_mngr, true);
   shared_ptr<AbstractExtentStack> gc_extent_stack =

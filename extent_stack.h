@@ -37,13 +37,11 @@ using ext_lst_stack_desc = std::map<float, stack_lst, std::greater<float>>;
 class AbstractExtentStack {
 protected:
   shared_ptr<StripeManager> stripe_manager;
-  shared_ptr<mutex> mtx;
-  inline void lock() {
-    if (mtx) mtx->lock();
-  }
-  inline void unlock() {
-    if (mtx) mtx->unlock();
-  }
+  shared_ptr<mutex> mtx = nullptr;
+
+  // Should only be called by the class itself in case the caller already
+  // holds the lock!
+  virtual int get_length_of_extent_stack_nolock(){ return 0; };
 
 public:
   AbstractExtentStack() : stripe_manager(nullptr) {}
@@ -85,15 +83,27 @@ public:
 
   virtual int num_stripes(int stripe_size) override = 0;
 
-  virtual list<ext_ptr > pop_stripe_num_exts(int stripe_size) override = 0;
+  virtual list<ext_ptr> pop_stripe_num_exts(int stripe_size) override = 0;
 
   void add_extent(float key, ext_ptr ext) override {
+    lock(this->mtx);
     if (this->extent_stack.find(key) == this->extent_stack.end())
       this->extent_stack.emplace(key, stack_val());
     this->extent_stack[key].push_back(ext);
+    unlock(this->mtx);
   }
 
   virtual int get_length_of_extent_stack() override {
+    int length = 0;
+    lock(this->mtx);
+    for (auto &kv : this->extent_stack) {
+      length += kv.second.size();
+    }
+    unlock(this->mtx);
+    return length;
+  }
+
+  virtual int get_length_of_extent_stack_nolock() override {
     int length = 0;
     for (auto &kv : this->extent_stack) {
       length += kv.second.size();
@@ -102,7 +112,9 @@ public:
   }
 
   virtual int get_length_at_key(float key) override {
+    lock(this->mtx);
     auto it = extent_stack.find(key);
+    unlock(this->mtx);
     return it == extent_stack.end() ? 0 : it->second.size();
   }
 
@@ -118,25 +130,31 @@ public:
   virtual ext_ptr get_extent_at_key(float key) override {
     if (extent_stack.find(key) == extent_stack.end())
       return nullptr;
+    lock(this->mtx);
     stack_val * exts = &this->extent_stack[key];
     ext_ptr ret = exts->front();
     exts->erase(exts->begin());
     if (exts->size() == 0)
       extent_stack.erase(key);
-    
+    unlock(this->mtx);
     return ret;
   }
 
   virtual bool contains_extent(ext_ptr extent) override {
+    lock(this->mtx);
     for (auto &kv : extent_stack) {
-      if (find(kv.second.begin(), kv.second.end(), extent) != kv.second.end())
+      if (find(kv.second.begin(), kv.second.end(), extent) != kv.second.end()) {
+        unlock(this->mtx);
         return true;
+      }
     }
+    unlock(this->mtx);
     return false;
   }
 
   // can end early
   virtual void remove_extent(ext_ptr extent) override {
+    lock(this->mtx);
     auto it =  extent_stack.begin();
     while (it != extent_stack.end()) {
       auto found = std::find(it->second.begin(), it->second.end(), extent);
@@ -152,7 +170,7 @@ public:
         it++;
       }
     }
-    
+    unlock(this->mtx);
   }
 };
 template<typename T = ext_stack_desc> 
@@ -165,10 +183,12 @@ public:
     return this->get_length_of_extent_stack() / stripe_size;
   }
 
-  list<ext_ptr > pop_stripe_num_exts(int stripe_size) override {
-    list<ext_ptr > ret;
+  list<ext_ptr> pop_stripe_num_exts(int stripe_size) override {
+    list<ext_ptr> ret;
     int num_left_to_add = stripe_size;
-    if (this->get_length_of_extent_stack() < num_left_to_add) {
+    lock(this->mtx);
+    if (this->get_length_of_extent_stack_nolock() < num_left_to_add) {
+      unlock(this->mtx);
       return ret;
     }
     /*
@@ -189,11 +209,12 @@ public:
       }
       if (it->second.size() == 0) {
         it = this->extent_stack.erase(it);
-      }else {
+      } else {
         it++;
       }
       num_left_to_add = stripe_size - ret.size();
     }
+    unlock(this->mtx);
     return ret;
   }
 };

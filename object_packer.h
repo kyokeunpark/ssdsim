@@ -11,6 +11,7 @@
 #include "extent_stack.h"
 #include "object_manager.h"
 #include "stripers.h"
+#include "lock.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -71,6 +72,8 @@ inline bool obj_record_desc_rem_size_extent(const obj_record &p1, const obj_reco
 /* Interface for ObjectPackers to follow
  */
 class ObjectPacker {
+protected:
+  shared_ptr<mutex> mtx = nullptr;
 
 public:
   virtual ~ObjectPacker() {}
@@ -107,12 +110,14 @@ public:
       shared_ptr<object_lst> obj_pool,
       shared_ptr<current_extents> current_exts,
       short num_objs_in_pool = 100, short threshold = 10,
-      bool record_ext_types = false)
+      bool record_ext_types = false, bool is_threaded = false)
       : obj_manager(obj_manager), ext_manager(ext_manager), obj_pool(obj_pool),
         current_exts(current_exts), num_objs_in_pool(num_objs_in_pool),
         threshold(threshold), record_ext_types(record_ext_types) {
     this->ext_types = ext_types_mgr();
     srand(0);
+    if (is_threaded)
+      this->mtx = make_shared<mutex>();
   }
   shared_ptr<current_extents> get_current_exts() { return current_exts; }
 
@@ -124,15 +129,15 @@ public:
    * deleting from an extent only part of the object should be put back
    * in the pool and repacked.
    */
-  void add_obj(obj_record r) override { 
-    obj_pool->emplace_back(r); 
+  void add_obj(obj_record r) override {
+    obj_pool->emplace_back(r);
   }
 
   /*
    * Add the objects in obj_lst to the object pool.
    */
   virtual void add_objs(object_lst obj_lst) {
-    obj_pool->reserve( obj_pool->size() + obj_lst.size() ); 
+    obj_pool->reserve( obj_pool->size() + obj_lst.size() );
     obj_pool->insert(obj_pool->end(), obj_lst.begin(), obj_lst.end());
   }
 
@@ -140,19 +145,27 @@ public:
    * Returns true if extent is in current extents dict and false otherwise
    */
   bool is_ext_in_current_extents(ext_ptr extent) {
-    for (auto &ext : *this->current_exts)
-      if (ext.second == extent)
+    lock(this->mtx);
+    for (auto &ext : *this->current_exts) {
+      if (ext.second == extent) {
+        unlock(this->mtx);
         return true;
+      }
+    }
+    unlock(this->mtx);
     return false;
   }
 
   void remove_extent_from_current_extents(ext_ptr extent) {
+    lock(this->mtx);
     for (auto &ext : *this->current_exts) {
       if (ext.second == extent) {
         (*current_exts)[ext.first] = ext_manager->create_extent();
+        unlock(this->mtx);
         return;
       }
     }
+    unlock(this->mtx);
   }
 
   /*
@@ -187,7 +200,6 @@ public:
   void update_extent_type(ext_ptr extent) {
     if (this->record_ext_types) {
       string ext_type = this->get_extent_type(extent);
-
       if (this->ext_types.find(ext_type) != this->ext_types.end())
         this->ext_types[ext_type] += 1;
       else
@@ -204,7 +216,9 @@ public:
     int num_exts_at_key = extent_stack->get_length_at_key(key);
     while (num_exts_at_key < num_exts) {
       object_lst objs = this->obj_manager->create_new_object();
+      lock(this->mtx);
       this->add_objs(objs);
+      unlock(this->mtx);
       auto temp = std::set<obj_ptr>();
       this->pack_objects(extent_stack, temp);
       num_exts_at_key = extent_stack->get_length_at_key(key);
@@ -219,11 +233,13 @@ public:
    */
   virtual void generate_stripes(shared_ptr<AbstractExtentStack> extent_stack,
                                 float simulation_time) {
-        if (obj_pool->size() < this->num_objs_in_pool) {
+    lock(this->mtx);
+    if (obj_pool->size() < this->num_objs_in_pool) {
       object_lst objs = this->obj_manager->create_new_object(
-      this->num_objs_in_pool - obj_pool->size());
+          this->num_objs_in_pool - obj_pool->size());
       this->add_objs(objs);
     }
+    unlock(this->mtx);
     auto temp = std::set<obj_ptr>();
     this->pack_objects(extent_stack, temp);
   }
@@ -233,12 +249,17 @@ public:
    */
   virtual void generate_objs(double space) {
     while (space > 0) {
+      lock(this->mtx);
       object_lst objs = this->obj_manager->create_new_object(1);
       space -= objs[0].second;
       this->add_objs(objs);
+      unlock(this->mtx);
     }
   }
 
+  /*
+   * The caller should be holding onto the mtx lock
+   */
   virtual void
   add_obj_to_current_ext_at_key(shared_ptr<AbstractExtentStack> extent_stack,
                                 obj_ptr obj, float obj_rem_size, float key) {
@@ -279,12 +300,14 @@ public:
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack, std::set<obj_ptr>& objs,
                     float key = 0) override {
+    lock(this->mtx);
     while (obj_pool->size() > 0) {
       obj_record obj = obj_pool->back();
       obj_pool->pop_back();
       this->add_obj_to_current_ext_at_key(extent_stack, obj.first,
                                           obj.second, key);
     }
+    unlock(this->mtx);
   };
   virtual void
   gc_extent(ext_ptr ext, shared_ptr<AbstractExtentStack> extent_stack,
@@ -313,13 +336,14 @@ public:
   virtual void
   gc_extent(ext_ptr ext, shared_ptr<AbstractExtentStack> extent_stack,
             std::set<obj_ptr>& objs) override {
-    // std::cout << "gc_extent simple GC" << std::endl;
+    lock(this->mtx);
     for (auto obj_kv : ext->objects) {
       auto obj = obj_kv.first;
       float size = ext->get_obj_size(obj);
       this->add_obj(obj_record(obj, size));
     }
     this->pack_objects(extent_stack, objs);
+    unlock(this->mtx);
   }
 
   void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,

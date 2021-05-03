@@ -62,8 +62,9 @@ public:
 
   int get_num_stripes() {
     lock(mtx);
-    return stripes->size();
+    int s = stripes->size();
     unlock(mtx);
+    return s;
   }
 
   stripe_ptr create_new_stripe(int ext_size) {

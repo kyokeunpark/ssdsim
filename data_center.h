@@ -123,7 +123,7 @@ class DataCenter {
   // For paralleled r/w
   const int nthreads;
   std::vector<std::thread> threads;
-  shared_ptr<mutex> mtx, metric_mtx;
+  shared_ptr<mutex> mtx = nullptr, metric_mtx = nullptr;
 
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
@@ -326,8 +326,8 @@ class DataCenter {
       // TODO: Currently, the multithreading works by locking the entirity of
       //       GC and fresh object creation, which is not ideal. We need
       //       finer grained object mixing.
-      lock(mtx);
       auto str_result = this->coordinator->generate_stripes();
+      lock(mtx);
       get_next_del(next_del_time, next_del_obj);
       unlock(mtx);
       cout << configtime << ": stripe generator done" << endl;

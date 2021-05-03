@@ -14,13 +14,13 @@ using e_queue = std::priority_queue<event, std::vector<event>, std::greater<even
 
 class EventManager {
   shared_ptr<mutex> mtx = nullptr;
+  e_queue *events;
 
 public:
-  e_queue *events;
 
   EventManager(bool is_threaded = false) : events(new e_queue()) {
     if (is_threaded)
-      mtx = make_shared<mutex>();
+      this->mtx = make_shared<mutex>();
   }
 
   void put_event(float life, obj_ptr obj) {
