@@ -122,8 +122,13 @@ class DataCenter {
   float striping_cycle, gc_cycle;
   // For paralleled r/w
   const int nthreads;
+  /*
+   * TODO: Currently, we only care about configuration with 2 concurrent threads
+   *       max. However, it may be desirable to be able to spawn more
+   *       concurrent threads in the future to mimic SSDs more closely.
+   */
   std::vector<std::thread> threads;
-  shared_ptr<mutex> mtx = nullptr, metric_mtx = nullptr;
+  shared_ptr<mutex> mtx = nullptr;
 
   shared_ptr<AbstractStriperDecorator> striper;
   shared_ptr<StripeManager> stripe_mngr;
@@ -209,7 +214,7 @@ class DataCenter {
       // Since garbage collection has to wait for gc cycle need to
       // add how long the data sits around before the garbage
       // collection kicks in to the obsolete data metric.
-      lock(metric_mtx);
+      lock(mtx);
       res.total_obsolete +=
           dr.total_added_obsolete * (configtime - next_del_time);
       for (auto it : dr.ext_types) {
@@ -224,21 +229,20 @@ class DataCenter {
               it.second * (configtime - next_del_time);
         }
       }
-      unlock(metric_mtx);
 
-      lock(mtx);
       get_next_del(next_del_time, next_del_obj);
       unlock(mtx);
     }
-
+    lock(mtx);
     this->event_mngr->put_event(next_del_time, next_del_obj);
+    unlock(mtx);
+
     auto gc_ret = this->gc_strategy->gc_handler(*gc_stripes_set);
     delete gc_stripes_set;
     lock(mtx);
     get_next_del(next_del_time, next_del_obj);
     unlock(mtx);
 
-    lock(metric_mtx);
     res.total_reclaimed_space += gc_ret.reclaimed_space;
     res.total_exts_gced += gc_ret.total_num_exts_replaced;
     res.new_obj_reads += gc_ret.total_user_reads;
@@ -286,13 +290,12 @@ class DataCenter {
       this->obs_by_ext_types[type] +=
           (net_obs_by_ext_type)[type] * this->gc_cycle;
     }
-    unlock(metric_mtx);
 
     lock(mtx);
     if (next_del_obj)
       this->event_mngr->put_event(next_del_time, next_del_obj);
-    unlock(mtx);
     cout << configtime << ": gc done" << endl;
+    unlock(mtx);
   }
 
   /*
@@ -329,8 +332,8 @@ class DataCenter {
       auto str_result = this->coordinator->generate_stripes();
       lock(mtx);
       get_next_del(next_del_time, next_del_obj);
-      unlock(mtx);
       cout << configtime << ": stripe generator done" << endl;
+      unlock(mtx);
 
       if (nthreads != 1)
         t1.join();
@@ -343,7 +346,6 @@ class DataCenter {
       obs_perc = -1;
         obs_perc =
             (added_obsolete_this_gc + net_obsolete) / used_space * 100;
-      unlock(metric_mtx);
 
       used_space = this->stripe_mngr->get_data_dc_size();
       daily_max_perc = std::max(obs_perc, daily_max_perc);
@@ -392,8 +394,8 @@ public:
         obs_by_ext_types(unordered_map<string, long double>()),
         stripe_mngr(stripe_mngr), nthreads(nthreads) {
     threads = std::vector<std::thread>(nthreads);
-    mtx = make_shared<mutex>();
-    metric_mtx = make_shared<mutex>();
+    if (nthreads != 1)
+      mtx = make_shared<mutex>();
   }
 
   sim_metric run_simulation() {

@@ -37,7 +37,9 @@ public:
   object_lst create_new_object(int num_samples = 1) {
     // std::cout << "create_new_object" << num_samples << std::endl;
     object_lst new_objs = object_lst();
+    lock(mtx);
     auto size_age_samples = sampler->get_size_age_sample(num_samples);
+    unlock(mtx);
     sizes size_samples = size_age_samples.first;
     lives life_samples = size_age_samples.second;
     for (int i = 0; i < size_samples.size(); i++) {
@@ -48,9 +50,9 @@ public:
         noise -= 12;
         life += noise / 24.0;
       }
+      lock(mtx);
       life += configtime;
       obj_ptr obj = make_shared<ExtentObject>(max_id, size, life);
-      lock(mtx);
       new_objs.emplace_back(std::make_pair(obj, size));
       this->objects[max_id] = obj;
       max_id++;

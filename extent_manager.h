@@ -32,11 +32,11 @@ public:
 
   ext_ptr create_extent(int s = 0, int secondary_threshold = 15) {
     ext_ptr e;
+    lock(mtx);
     if (!s)
       e = make_shared<Extent>(ext_size, secondary_threshold, max_id);
     else
       e = make_shared<Extent>(s, secondary_threshold, max_id);
-    lock(mtx);
     max_id++;
     exts.insert(e);
     unlock(mtx);

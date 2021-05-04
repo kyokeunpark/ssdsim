@@ -37,7 +37,12 @@ public:
     unlock(mtx);
   }
 
-  bool empty() { return events->empty(); }
+  bool empty() {
+    lock(mtx);
+    bool e = events->empty();
+    unlock(mtx);
+    return e;
+  }
 
   event pop_event() {
     event e(-1, nullptr);
