@@ -370,6 +370,7 @@ public:
    void pack_objects(shared_ptr<AbstractExtentStack> extent_stack,
                     std::set<obj_ptr>& objs, float key = 0) override {
     vector<obj_ptr> objs_lst = {};
+    lock(this->mtx);
     for (auto &record : *obj_pool) {
       float rem_size = record.second;
       for (int i = 0; i < rem_size / 4; i++)
@@ -377,10 +378,14 @@ public:
     }
     object_lst empty_lst;
     obj_pool->swap(empty_lst);
+    unlock(this->mtx);
 
     std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
-    for (auto &record : objs_lst)
+    for (auto &record : objs_lst) {
+      lock(this->mtx);
       this->add_obj_to_current_ext_at_key(extent_stack, record, 4, key);
+      unlock(this->mtx);
+    }
   }
 };
 
@@ -404,9 +409,11 @@ public:
     }
     object_lst empty_lst;
     obj_pool->swap(empty_lst);
+
     std::shuffle(objs_lst.begin(), objs_lst.end(), generator);
-    for (auto &it : objs_lst)
-      this->add_obj_to_current_ext_at_key(extent_stack, it, 4, key);
+    for (auto &record : objs_lst) {
+      this->add_obj_to_current_ext_at_key(extent_stack, record, 4, key);
+    }
   }
 };
 

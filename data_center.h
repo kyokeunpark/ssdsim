@@ -201,7 +201,7 @@ class DataCenter {
       added_obsolete_by_type[it.first] = 0;
     // Find all candidates for GC
     set<stripe_ptr> * gc_stripes_set = new set<stripe_ptr>();
-    while (next_del_time <= configtime && !event_mngr->empty()) {
+    while (true) {
       del_result dr;
       lock(mtx);
       if (next_del_obj)
@@ -231,9 +231,10 @@ class DataCenter {
       }
 
       get_next_del(next_del_time, next_del_obj);
+      if (next_del_time > configtime || event_mngr->empty())
+        break;
       unlock(mtx);
     }
-    lock(mtx);
     this->event_mngr->put_event(next_del_time, next_del_obj);
     unlock(mtx);
 
@@ -294,7 +295,7 @@ class DataCenter {
     lock(mtx);
     if (next_del_obj)
       this->event_mngr->put_event(next_del_time, next_del_obj);
-    cout << configtime << ": gc done" << endl;
+    // cout << configtime << ": gc done" << endl;
     unlock(mtx);
   }
 
@@ -332,7 +333,7 @@ class DataCenter {
       auto str_result = this->coordinator->generate_stripes();
       lock(mtx);
       get_next_del(next_del_time, next_del_obj);
-      cout << configtime << ": stripe generator done" << endl;
+      // cout << configtime << ": stripe generator done" << endl;
       unlock(mtx);
 
       if (nthreads != 1)

@@ -139,8 +139,11 @@ DataCenter (*parse_config(string confname))(const unsigned long, const float,
     return randomized_objs_no_exts_mix_objs_config;
   else if (confname == "no_exts_mix_objs_config")
     return no_exts_mix_objs_config;
+  // Multithreaded
   else if (confname == "stripe_level_with_no_exts_config_mt")
     return stripe_level_with_no_exts_config_mt;
+  else if (confname == "randomized_objs_no_exts_config_mt")
+    return randomized_objs_no_exts_config_mt;
   return nullptr;
 }
 
