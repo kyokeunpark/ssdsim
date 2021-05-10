@@ -29,13 +29,13 @@ public:
   float size;
   double life;
   int generation;
-  time_t creation_time;
+  float creation_time;
   int num_times_gced;
   list<ext_ptr> extents;
 
   ExtentObject(int id, float s, float l)
       : id(id), size(s), life(l), generation(0), num_times_gced(0),
-        creation_time(time(nullptr)), extents(list<ext_ptr>()) {}
+        creation_time(configtime), extents(list<ext_ptr>()) {}
 
   ~ExtentObject() {
     extents.clear();

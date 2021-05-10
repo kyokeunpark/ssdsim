@@ -21,7 +21,7 @@
 #include <variant>
 #include <vector>
 
-typedef std::tuple<float, obj_ptr, int> obj_pq_record;
+typedef std::tuple<float, obj_ptr, float> obj_pq_record;
 using obj_pq = std::priority_queue<std::variant<obj_record, obj_pq_record>>;
 using current_extents = std::unordered_map<int, ext_ptr >;
 using ext_types_mgr = std::unordered_map<string, int>;
